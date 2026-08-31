@@ -1,0 +1,78 @@
+name: SignSealShip Partner API
+description: >-
+  A pay-per-use platform to sign, notarize (including remote online notarization / RON), and ship documents, producing
+  cryptographic evidence with public verification URLs. The partner API adds Verified Closing Rooms and sealed,
+  versioned Closing Passports, plus a free open dataset of RON requirements.
+url: https://raw.githubusercontent.com/api-evangelist/signsealship-partner-api/refs/heads/main/apis.yml
+created: '2026-08-31'
+modified: '2026-08-31'
+specificationVersion: '0.21'
+tags:
+  - notarization
+  - remote online notarization
+  - electronic signature
+  - document verification
+  - legal technology
+  - real estate
+  - title & escrow
+  - shipping
+  - open data
+  - state law
+  - legal reference
+apis:
+  - name: SignSealShip Partner API
+    description: >-
+      REST API to sign, notarize, and ship documents, manage Verified Closing Rooms, seal Closing Passports, and verify
+      evidence. OpenAPI 3.1 contract with 35 paths, bearer partner-key auth.
+    humanURL: https://docs.signsealship.com
+    baseURL: https://signsealship.com
+    tags:
+      - notarization
+      - remote online notarization
+      - electronic signature
+      - document verification
+      - legal technology
+      - real estate
+      - title & escrow
+      - shipping
+      - open data
+      - state law
+      - legal reference
+    properties:
+      - type: OpenAPI
+        url: https://docs.signsealship.com/api-reference/openapi.json
+      - type: Documentation
+        url: https://docs.signsealship.com
+      - type: Documentation
+        url: https://docs.signsealship.com/api-reference/authentication
+      - type: LLMsTxt
+        url: https://docs.signsealship.com/llms.txt
+  - name: RON Requirements Open Dataset
+    description: >-
+      Remote online notarization requirements for all 51 U.S. jurisdictions (50 states + DC), with effective dates, fee
+      caps, identity-verification standards, retention periods, and primary-source citations. Licensed CC BY 4.0.
+    humanURL: https://signsealship.com/ron-laws
+    baseURL: https://signsealship.com
+    tags:
+      - notarization
+      - remote online notarization
+      - electronic signature
+      - document verification
+      - legal technology
+      - real estate
+      - title & escrow
+      - shipping
+      - open data
+      - state law
+      - legal reference
+    properties:
+      - type: Documentation
+        url: https://signsealship.com/ron-laws
+maintainers:
+  - FN: SignSealShip Partner API
+    url: https://signsealship.com
+generated:
+  by: apis.io/add
+  model: claude-opus-4-8
+  confidence: 97
+  at: '2026-08-31T19:18:34.133Z'
