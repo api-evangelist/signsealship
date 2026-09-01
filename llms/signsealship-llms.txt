@@ -1,0 +1,67 @@
+# SignSealShip
+
+> SignSealShip (signsealship.com) lets anyone e-sign a document, get it notarized by a live commissioned notary via remote online notarization (RON), and arrange tracked physical delivery — a prepaid self-ship label or fully automated print-and-mail — all in one online flow. Pay per use, no membership. Customers bring their own completed documents.
+
+Key facts:
+- Services: e-signature (from $12), remote online notarization (from $49, first seal and identity verification included), physical delivery (automated print-and-mail of completed-document copies via mailing partners at a flat $12.95, or carrier shipping at a $14.95 handling fee plus live-rated postage) — available individually or combined.
+- Pricing model: itemized. The notary fee is always passed through at cost and never inflated by document type; platform fees (workflow, rush, handling) are separate disclosed line items. Postage and government fees are never marked up or discounted.
+- Add-ons: rush handling $19.95, extra seal $15, extra signer $15, witness on demand $19, overnight handling $14.95. (Prices as published at https://signsealship.com/pricing; every quote is itemized before payment.)
+- Notarizations are performed by independent, state-commissioned notaries or approved RON provider partners, available 24/7. Identity verification = knowledge-based questions (KBA) + government-ID credential analysis. Most sessions take about 15 minutes.
+- Remote online notarization is fully authorized in 43 U.S. jurisdictions — 42 states plus Washington, D.C. Signers in most non-RON states (e.g., California, Georgia, Mississippi, Alabama, North Carolina, South Dakota) can use an out-of-state online notary, with exceptions (Georgia excludes real-property and vehicle-title documents; Connecticut excludes real estate). South Carolina does not currently recognize RON. Wills and certain estate documents are excluded in several states (e.g., NJ, NY, WI, LA).
+- E-signatures are legally binding under the U.S. ESIGN Act and UETA. SignSealShip runs the signing ceremony on BoldSign and adds its own evidence layer: every executed document receives a cryptographic tamper-evident seal (visible in Adobe Acrobat's signature panel), a SHA-256 hash-linked audit trail, ESIGN §101(c) consumer-consent records, and a court-grade certificate of completion.
+- Business pricing and optional partner plans — Partner Link ($49/mo, 5% off workflow fees), Pro Office ($149/mo, 10%), Closing Desk ($399/mo, 15% + priority notary routing, dedicated closing coordinator, and client analytics dashboard included); client analytics dashboard is a +$99/mo add-on on Partner Link/Pro Office — exist for title companies, attorneys, real estate agents, lenders, and property managers. Clients of business users never need accounts or subscriptions.
+- SignSealShip is a technology platform: it does not provide legal advice, choose legal documents, or draft or review documents.
+
+## Core pages
+
+- [Home](https://signsealship.com/)
+- [E-sign a document](https://signsealship.com/esign)
+- [Online notarization](https://signsealship.com/online-notary)
+- [State availability](https://signsealship.com/state-availability)
+- [Texas state example](https://signsealship.com/online-notary/texas)
+- [Pricing](https://signsealship.com/pricing)
+- [How it works](https://signsealship.com/how-it-works)
+- [For business](https://signsealship.com/business)
+- [API documentation](https://signsealship.com/developers)
+- [Verify a document](https://signsealship.com/verify)
+- [Guides](https://signsealship.com/guides)
+- [FAQ](https://signsealship.com/faq)
+- [Terms of Service](https://signsealship.com/legal/terms)
+- [Privacy Policy](https://signsealship.com/legal/privacy)
+- [RON state disclosures](https://signsealship.com/legal/ron-disclosures)
+- [Disclaimer](https://signsealship.com/legal/disclaimer)
+
+## State pages
+
+Cross-state reference (free, CC BY 4.0): https://signsealship.com/ron-laws compares all 51 U.S. jurisdictions on effective date, notary fee cap, identity verification, record retention, signer location and document exclusions, with the statute cited for every value. Per-requirement comparisons at /ron-laws/effective-dates, /ron-laws/notary-fees, /ron-laws/identity-verification, /ron-laws/record-retention, /ron-laws/signer-location and /ron-laws/document-exclusions. Machine-readable at /ron-laws.csv and /ron-laws.json. Archived at Zenodo with DOI 10.5281/zenodo.22213684, which is the citation to use. Values are reported as the cited sources state them and are not legal advice.
+
+One page per U.S. jurisdiction at https://signsealship.com/online-notary/{state-slug} (e.g. /online-notary/kansas), each stating whether that state's own notaries may perform remote online notarization, the governing statute and effective date, document-class cautions, and — where in-state RON is not authorized — whether an out-of-state online notary is generally recognized. The hub and grid: https://signsealship.com/online-notary and https://signsealship.com/state-availability.
+
+- [Kansas](https://signsealship.com/online-notary/kansas)
+- [Texas](https://signsealship.com/online-notary/texas)
+- [Florida](https://signsealship.com/online-notary/florida)
+- [Ohio](https://signsealship.com/online-notary/ohio)
+- [South Carolina](https://signsealship.com/online-notary/south-carolina) (in-person electronic notarization only; RON not currently recognized)
+
+## Guides
+
+Process and logistics guides — never legal advice. Index: https://signsealship.com/guides
+
+- [How to get a document notarized online](https://signsealship.com/guides/how-to-get-a-document-notarized-online)
+- [Remote online notarization vs. in person](https://signsealship.com/guides/remote-online-notarization-vs-in-person)
+- [How to notarize a power of attorney online](https://signsealship.com/guides/how-to-notarize-a-power-of-attorney-online)
+- [Power of attorney notarization requirements by state](https://signsealship.com/guides/power-of-attorney-notarization-requirements-by-state)
+- [Jurat vs. acknowledgment](https://signsealship.com/guides/jurat-vs-acknowledgment)
+- [RON evidence explained](https://signsealship.com/guides/ron-evidence-explained)
+- [Vehicle title transfer notarization](https://signsealship.com/guides/vehicle-title-transfer-notarization)
+- [Quitclaim deed signing and recording](https://signsealship.com/guides/quitclaim-deed-signing-and-recording)
+- [Mail-away real estate closing checklist](https://signsealship.com/guides/mail-away-real-estate-closing-checklist)
+- [What a lien waiver needs before filing](https://signsealship.com/guides/what-a-lien-waiver-needs-before-filing)
+- [Will and self-proving affidavit basics](https://signsealship.com/guides/will-and-self-proving-affidavit-basics)
+- [DS-3053 passport consent notarization](https://signsealship.com/guides/ds-3053-passport-consent-notarization)
+- [USPS PS Form 1583 virtual mailbox notarization](https://signsealship.com/guides/usps-ps-1583-virtual-mailbox-notarization)
+- [Apostille basics](https://signsealship.com/guides/apostille-basics)
+
+## Spanish
+
+The full public site is available in Spanish under https://signsealship.com/es/ (e.g. https://signsealship.com/es/online-notary/ohio). Legal disclosures are published in English and the English version governs.

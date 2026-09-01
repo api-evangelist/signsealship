@@ -1,0 +1,99 @@
+generated: '2026-09-01'
+method: derived
+source: >-
+  openapi/signsealship-partner-api-openapi.yml (4xx/5xx responses across all 39 operations),
+  enriched from https://docs.signsealship.com/api-reference/authentication and
+  https://docs.signsealship.com/api-reference/webhooks
+format: custom
+format_note: >-
+  NOT RFC 9457. Every documented error response is media type application/json carrying the
+  components.schemas.Error shape -- a single object with one string member, `error`. There is no
+  application/problem+json, no `type` URI, no `title`, no `status` member and no `instance`, so
+  an agent has nothing machine-stable to branch on except the HTTP status code and, for the
+  passport verify endpoints, a `verdict` enum. Adopting RFC 9457 with stable type URIs is the
+  single largest error-handling improvement available here.
+envelope:
+  media_type: application/json
+  schema: '#/components/schemas/Error'
+  shape: '{ "error": "<human sentence>" }'
+  exceptions:
+  - endpoints:
+    - GET /api/verify/room/{verifyCode}
+    - GET /api/passport/verify/{code}
+    shape: '{ "verdict": "unknown" }'
+    note: >-
+      The public verification endpoints answer an unknown OR malformed code with an identical
+      generic 404 carrying a verdict enum rather than the Error envelope. The sameness is
+      deliberate -- it stops the endpoint being used to probe which codes exist.
+status_summary:
+  '400': 8
+  '401': 31
+  '403': 8
+  '404': 25
+  '409': 3
+  '429': 1
+  '502': 1
+  '503': 2
+problem_types:
+- status: 400
+  title: Malformed request
+  observed_messages:
+  - 'A https:// webhook URL is required.'
+  - 'topics is empty or contains a value outside the allowed set.'
+  remediation: >-
+    Fix the payload before retrying. On webhook creation the URL must be https and topics[] must
+    be a non-empty subset of the seven published topics.
+- status: 401
+  title: Missing or invalid partner key
+  observed_messages:
+  - 'A valid partner API key is required.'
+  remediation: >-
+    Send Authorization: Bearer sss_pk_... . A missing, malformed, revoked and unknown key all
+    produce this identical response by design, so the body cannot be used to distinguish them.
+    Keys are shown once at issue and cannot be recovered -- request a replacement.
+  docs: https://docs.signsealship.com/api-reference/authentication
+- status: 403
+  title: Session present but no partner linked
+  remediation: >-
+    Reserved for a valid dashboard session that has not yet been linked to a partner account.
+    Link a session once with a partner key at https://signsealship.com/partner. Before the
+    2026-08-01 release GET /api/partner/me returned 403 for a missing credential too; it now
+    correctly returns 401, so the two cases are finally distinguishable.
+  changed: '2026-08-01'
+- status: 404
+  title: Not found, or not yours
+  remediation: >-
+    Partner isolation is enforced through the 404. Another partner's order, room or passport and
+    a code that does not exist return the identical response -- absence of a resource and lack of
+    authorization are intentionally indistinguishable. Do not treat 404 as proof a record was
+    deleted. On the Playbooks endpoints a 404 also means the feature is not enabled for the
+    account.
+- status: 409
+  title: Conflict with current state
+  remediation: >-
+    A quota or state precondition failed -- the tier's active-room quota (5 trial/PartnerLink,
+    25 ProOffice, unlimited ClosingDesk), the 50-orders-per-room cap, the 25-participants-per-room
+    cap, or the 20-versions-per-room Closing Passport cap. Not retryable without changing state.
+- status: 429
+  title: Rate limit exceeded
+  remediation: >-
+    Back off until the fixed one-minute window resets (one hour for partner-request). See
+    rate-limits/signsealship-rate-limits.yml for the five named policies.
+  docs: https://docs.signsealship.com/api-reference/authentication
+- status: 502
+  title: Upstream dependency failed
+  remediation: >-
+    A downstream dependency (sealing, timestamp authority, payment or notary partner) did not
+    answer. Retry with the same Idempotency-Key where the operation accepts one.
+- status: 503
+  title: Service unavailable
+  remediation: >-
+    Temporary. Retry with backoff; check https://signsealship.com/status, which runs live checks
+    at request time rather than serving a cached badge.
+gaps:
+- No RFC 9457 application/problem+json representation.
+- No stable machine-readable error code or type URI -- only an English sentence in `error`.
+- >-
+  No published error-reference page in the docs; error strings are documented inline per
+  operation, so a consumer cannot enumerate the possible failures of the API in one place.
+- No Retry-After header is documented on the 429 response.

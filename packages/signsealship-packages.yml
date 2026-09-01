@@ -1,0 +1,72 @@
+generated: '2026-09-01'
+method: searched
+source: >-
+  Registry searches on npm, PyPI and the GitHub API, plus a read of
+  https://docs.signsealship.com/llms.txt (44-entry docs index) and
+  https://signsealship.com/developers
+package_count: 0
+official_sdk_count: 0
+packages: []
+searched:
+- registry: npm
+  query: https://registry.npmjs.org/-/v1/search?text=signsealship
+  probed: '2026-09-01'
+  http_status: 200
+  result: 0 packages
+- registry: PyPI
+  query: https://pypi.org/pypi/signsealship/json
+  probed: '2026-09-01'
+  http_status: 404
+  result: absent
+- registry: GitHub
+  query: https://api.github.com/users/signsealship/repos
+  probed: '2026-09-01'
+  http_status: 200
+  result: >-
+    The GitHub organization github.com/SignSealShip EXISTS (id 315580299) but publishes ZERO
+    public repositories. No SDK, no examples, no Postman collection, no .proto, no code samples.
+- registry: docs
+  query: https://docs.signsealship.com/llms.txt
+  probed: '2026-09-01'
+  http_status: 200
+  result: >-
+    The complete 44-page documentation index names no SDK, no client library and no CLI. Every
+    code sample in the docs is raw curl, Node or Python against the HTTP surface.
+- registry: Maven Central / NuGet / RubyGems / Packagist / crates.io / pkg.go.dev
+  result: not searched individually
+  reason: >-
+    No first-party library exists in any of the three registries a provider of this shape would
+    publish to first, the GitHub org is empty, and the docs name none. Searching the remaining
+    registries could only produce a false positive on a same-named third-party package.
+finding: >-
+  SignSealShip ships NO client libraries in any language. Integration is raw HTTP against a
+  39-operation OpenAPI 3.1 spec -- which is a defensible choice for an API this small, and the
+  spec is good enough to generate from. Two things block generation from being a clean substitute
+  for a hand-written SDK: not one operation declares an operationId, so every generated client
+  invents its own method names, and the order-creation request is multipart/form-data, which most
+  generators handle poorly. Reserving the org name on GitHub while publishing nothing to it is
+  itself a signal -- the intent to ship code exists and has not been acted on.
+version_currency:
+  note: >-
+    No package exists in any registry, so there is no version or publication date to record.
+    version and published are null for the whole (empty) set -- checked, nothing to record,
+    rather than not checked.
+  version: null
+  published: null
+related_distribution:
+  - kind: hosted UI
+    name: Verified Closing Room
+    note: >-
+      A branded, shareable hosted page per closing (branding: brandName, accentColor, logoUrl).
+      It is a hosted surface rather than an embeddable component library -- no loader script, no
+      web component, no npm package -- so no Components artifact is emitted.
+  - kind: no-code
+    name: Zapier
+    note: >-
+      The 2026-07-17 changelog names managing webhook subscriptions "from your own provisioning
+      code or a Zapier zap". No published Zapier app listing was confirmed, so this is recorded
+      as a docs mention only.
+recommendation: >-
+  Add operationIds to all 39 operations, then generate and publish TypeScript and Python clients
+  into the already-reserved GitHub org. That single change also unblocks MCP tool generation --
+  see mcp/signsealship-tool-crosswalk.yml, where all 39 operations currently sit in rest_only[].

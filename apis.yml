@@ -1,78 +1,203 @@
+aid: signsealship
 name: SignSealShip Partner API
-description: >-
-  A pay-per-use platform to sign, notarize (including remote online notarization / RON), and ship documents, producing
-  cryptographic evidence with public verification URLs. The partner API adds Verified Closing Rooms and sealed,
-  versioned Closing Passports, plus a free open dataset of RON requirements.
-url: https://raw.githubusercontent.com/api-evangelist/signsealship-partner-api/refs/heads/main/apis.yml
+type: Index
+description: E-signature, remote online notarization coordination, document verification and physical delivery in one workflow.
+  The API covers onboarding, orders, closing rooms, closing passports, proof passports, webhooks and a sandbox. Also indexes
+  a free CC BY 4.0 dataset of remote online notarization requirements for all 51 U.S. jurisdictions.
+image: https://signsealship.com/brand/icon-512.png
+url: https://signsealship.com/.well-known/apis.json
 created: '2026-08-31'
-modified: '2026-08-31'
-specificationVersion: '0.21'
+modified: '2026-09-01'
+specificationVersion: '0.15'
 tags:
+- notarization
+- remote online notarization
+- electronic signature
+- document verification
+- legal technology
+- real estate
+- title and escrow
+- shipping
+apis:
+- aid: signsealship.com:partner-api
+  name: SignSealShip Partner API
+  description: Create and track orders that combine e-signature, remote online notarization and tracked delivery. 35 documented
+    paths across Onboarding, Orders, Sandbox, Closing Rooms, Closing Passports, Proof Passport, Webhooks, and Launchpad &
+    Analytics. OpenAPI 3.1.0.
+  image: https://signsealship.com/brand/icon-512.png
+  humanURL: https://docs.signsealship.com
+  baseURL: https://signsealship.com
+  tags:
   - notarization
-  - remote online notarization
   - electronic signature
   - document verification
-  - legal technology
-  - real estate
-  - title & escrow
   - shipping
+  properties:
+  - type: Documentation
+    url: https://docs.signsealship.com
+  - type: OpenAPI
+    url: https://docs.signsealship.com/api-reference/openapi.json
+  - type: API Onboarding
+    url: https://signsealship.com/.well-known/api-onboarding.json
+  - type: Authentication
+    url: https://docs.signsealship.com/api-reference/authentication
+  - type: Webhooks
+    url: https://docs.signsealship.com/api-reference/webhooks
+    description: Repointed 2026-09-01. The previous target, https://signsealship.com/partner/webhooks, returns 200 but is
+      a dashboard route that client-side redirects to /login?next=%2Fpartner%2Fwebhooks -- it is a login wall, not a webhook
+      reference. The public reference is on the docs host (HTTP 200).
+  - type: Sandbox
+    url: https://docs.signsealship.com/api-reference/orders
+    description: Repointed 2026-09-01. The previous target, https://signsealship.com/partner/launchpad, is a login-gated dashboard
+      route. The sandbox is the /api/partner/sandbox/* order lifecycle documented on the public Order API reference; see sandbox/signsealship-sandbox.yml.
+  - type: MCPServer
+    url: https://sign-seal-ship.main-kill-isr.mintlify.me/mcp
+    description: Mintlify DOCUMENTATION-SEARCH MCP on a mintlify.me preview host -- not the Partner API and not a first-party
+      host. Answers initialize with 200. Declared in docs.signsealship.com/.well-known/mcp.json, which the provider apis.json
+      does not mention. Verified 2026-09-01.
+  - type: OpenAPI
+    url: openapi/signsealship-partner-api-openapi.yml
+    description: Harvested verbatim 2026-09-01 from https://docs.signsealship.com/api-reference/openapi.json (HTTP 200) and
+      byte-identical to the mirror at https://signsealship.com/openapi.json. OpenAPI 3.1.0, 35 paths / 39 operations. Original
+      JSON kept at openapi/_original/.
+  - type: Overlay
+    url: overlays/signsealship-partner-api-overlay.yaml
+    description: OpenAPI Overlay 1.0.0 with 11 non-destructive actions adding rate limits, error format, permission strings,
+      environment model, webhook topics, reversibility and domain standards to the upstream spec without mutating it.
+  - type: Authentication
+    url: authentication/signsealship-authentication.yml
+  - type: Sandbox
+    url: sandbox/signsealship-sandbox.yml
+  - type: Webhooks
+    url: asyncapi/signsealship-webhooks.yml
+  - type: MCPServer
+    url: mcp/signsealship-mcp.yml
+    description: 'Probed profile of the declared MCP server, including the required deployment block (mode: remote, auth:
+      none, verified: probed).'
+  - type: ToolCrosswalk
+    url: mcp/signsealship-tool-crosswalk.yml
+    description: 'MCP-to-REST crosswalk. Zero bound rows: the only MCP server is a documentation-search server, so all 39
+      OpenAPI operations sit in rest_only[].'
+  - type: ErrorCatalog
+    url: errors/signsealship-problem-types.yml
+  - type: DataModel
+    url: data-model/signsealship-data-model.yml
+  - type: RateLimits
+    url: rate-limits/signsealship-rate-limits.yml
+  - type: Conventions
+    url: conventions/signsealship-conventions.yml
+  - type: Idempotency
+    url: conventions/signsealship-conventions.yml
+    description: The contract declares an optional Idempotency-Key request header (components.parameters.IdempotencyKey, 8-255
+      chars) on POST /api/partner/orders and POST /api/partner/orders/{code}/checkout, with replay-the-original-response semantics.
+      Retention window is not published.
+  contact:
+  - FN: SignSealShip
+    url: https://signsealship.com/contact
+- aid: signsealship.com:ron-laws-dataset
+  name: Remote online notarization requirements by U.S. jurisdiction
+  description: 'Statute-cited remote online notarization requirements for all 50 U.S. states and the District of Columbia:
+    effective date, notary fee cap, identity-verification standard, record-retention period, signer-location rule and document
+    exclusions. Every value carries its own primary-source citation. Published under CC BY 4.0 and archived at Zenodo (DOI
+    10.5281/zenodo.22213684). Values are reported as the cited sources state them and are not legal advice.'
+  humanURL: https://signsealship.com/ron-laws
+  baseURL: https://signsealship.com
+  tags:
   - open data
+  - remote online notarization
   - state law
   - legal reference
-apis:
-  - name: SignSealShip Partner API
-    description: >-
-      REST API to sign, notarize, and ship documents, manage Verified Closing Rooms, seal Closing Passports, and verify
-      evidence. OpenAPI 3.1 contract with 35 paths, bearer partner-key auth.
-    humanURL: https://docs.signsealship.com
-    baseURL: https://signsealship.com
-    tags:
-      - notarization
-      - remote online notarization
-      - electronic signature
-      - document verification
-      - legal technology
-      - real estate
-      - title & escrow
-      - shipping
-      - open data
-      - state law
-      - legal reference
-    properties:
-      - type: OpenAPI
-        url: https://docs.signsealship.com/api-reference/openapi.json
-      - type: Documentation
-        url: https://docs.signsealship.com
-      - type: Documentation
-        url: https://docs.signsealship.com/api-reference/authentication
-      - type: LLMsTxt
-        url: https://docs.signsealship.com/llms.txt
-  - name: RON Requirements Open Dataset
-    description: >-
-      Remote online notarization requirements for all 51 U.S. jurisdictions (50 states + DC), with effective dates, fee
-      caps, identity-verification standards, retention periods, and primary-source citations. Licensed CC BY 4.0.
-    humanURL: https://signsealship.com/ron-laws
-    baseURL: https://signsealship.com
-    tags:
-      - notarization
-      - remote online notarization
-      - electronic signature
-      - document verification
-      - legal technology
-      - real estate
-      - title & escrow
-      - shipping
-      - open data
-      - state law
-      - legal reference
-    properties:
-      - type: Documentation
-        url: https://signsealship.com/ron-laws
+  properties:
+  - type: DOI
+    url: https://doi.org/10.5281/zenodo.22213684
+  - type: JSON
+    url: https://signsealship.com/ron-laws.json
+  - type: CSV
+    url: https://signsealship.com/ron-laws.csv
+  - type: Documentation
+    url: https://signsealship.com/ron-laws
+  - type: License
+    url: https://creativecommons.org/licenses/by/4.0/
+  - type: Changelog
+    url: https://signsealship.com/ron-laws#corrections
+  - type: Repository
+    url: https://zenodo.org/records/22213685
 maintainers:
-  - FN: SignSealShip Partner API
-    url: https://signsealship.com
-generated:
-  by: apis.io/add
-  model: claude-opus-4-8
-  confidence: 97
-  at: '2026-08-31T19:18:34.133Z'
+- FN: SignSealShip
+  url: https://signsealship.com
+  X-twitter: ''
+  email: ''
+common:
+- type: DeveloperPortal
+  url: https://signsealship.com/developers
+- type: Documentation
+  url: https://docs.signsealship.com
+- type: APIReference
+  url: https://docs.signsealship.com/api-reference
+- type: GettingStarted
+  url: https://docs.signsealship.com/quickstart
+- type: Support
+  url: https://signsealship.com/contact
+- type: HelpCenter
+  url: https://signsealship.com/faq
+- type: Login
+  url: https://signsealship.com/login
+- type: SignUp
+  url: https://signsealship.com/partner
+- type: Pricing
+  url: https://signsealship.com/pricing
+- type: TermsOfService
+  url: https://signsealship.com/legal/terms
+- type: PrivacyPolicy
+  url: https://signsealship.com/legal/privacy
+- type: StatusPage
+  url: https://signsealship.com/status
+- type: ChangeLog
+  url: https://docs.signsealship.com/changelog/overview
+- type: ChangeLog
+  url: changelog/signsealship-changelog.yml
+- type: Plans
+  url: plans/signsealship-plans-pricing.yml
+- type: Packages
+  url: packages/signsealship-packages.yml
+  description: Zero first-party client libraries. npm and PyPI searched 2026-09-01; the GitHub organization github.com/SignSealShip
+    exists but publishes no public repositories. No SDKs pointer is emitted because there is no SDK.
+- type: WellKnown
+  url: well-known/signsealship-well-known.yml
+  description: 'Five documents served across two hosts: apis.json and api-onboarding.json on the apex, agent-card.json, mcp.json
+    and an agent skill on the docs host.'
+- type: APIsJSON
+  url: well-known/signsealship-apis.json
+- type: LLMsTxt
+  url: llms/signsealship-llms.txt
+- type: AgentCard
+  url: a2a/signsealship-a2a.yml
+  description: Probed 2026-09-01 at https://docs.signsealship.com/.well-known/agent-card.json (HTTP 200). Graded conformant
+    against A2A 1.0.0 hard checks; scope is the documentation site, not the API.
+- type: AgentSkill
+  url: skills/_index.yml
+  description: One provider-published skill saved verbatim from https://docs.signsealship.com/.well-known/agent-skills/sign/skill.md,
+    plus three generated from the OpenAPI.
+- type: Conformance
+  url: conformance/signsealship-conformance.yml
+  description: 'Includes a domain-standard signature: the contract declares RFC 3161 and OpenTimestamps timestamp evidence
+    as structured response objects, plus a SHA-256 hash-chained evidence manifest. No Compliance pointer is emitted -- the
+    provider holds no certifications and says so explicitly.'
+- type: DomainSecurity
+  url: security/signsealship-domain-security.yml
+- type: VulnerabilityDisclosure
+  url: security/signsealship-vulnerability-disclosure.yml
+- type: Security
+  url: security/signsealship-vulnerability-disclosure.yml
+  description: 'A real responsible-disclosure program is published at https://signsealship.com/security (security@signsealship.com,
+    good-faith safe harbor, acknowledgement committed). It is not machine-discoverable: /.well-known/security.txt 404s on
+    both hosts.'
+- type: TrustCenter
+  url: security/signsealship-trust-center.yml
+- type: SecurityPolicy
+  url: https://signsealship.com/security
+x-enrichment:
+  date: '2026-09-01'
+  status: enriched
+  artifacts_added: 34
+  pass: local-v1

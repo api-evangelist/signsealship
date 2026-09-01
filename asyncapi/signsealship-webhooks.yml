@@ -1,0 +1,124 @@
+generated: '2026-09-01'
+method: searched
+source: >-
+  https://docs.signsealship.com/api-reference/webhooks,
+  https://docs.signsealship.com/webhooks-guide,
+  openapi/signsealship-partner-api-openapi.yml
+docs: https://docs.signsealship.com/webhooks-guide
+asyncapi_published: false
+asyncapi_note: >-
+  No AsyncAPI document is published. Probed https://signsealship.com/asyncapi.yaml (404),
+  /asyncapi.json (404) and https://docs.signsealship.com/asyncapi.yaml (404) on 2026-09-01. The
+  event surface is real and well documented in prose and in the OpenAPI management operations,
+  but the OpenAPI declares no top-level `webhooks:` block at all -- so the event payloads exist only
+  as documentation, never as a machine-readable contract. Publishing an AsyncAPI 3.0 document,
+  or simply filling the OpenAPI 3.1 `webhooks:` block the spec already has room for, would make
+  this surface machine-consumable at near-zero cost.
+surface: webhooks
+transport: HTTPS POST
+delivery:
+  method: POST
+  content_type: application/json
+  url_requirement: >-
+    https only. A non-https URL is rejected with 400 {"error": "A https:// webhook URL is
+    required."}
+  headers:
+  - name: SignSealShip-Signature
+    format: 't=<unix seconds>,v1=<hex hmac>'
+    note: >-
+      During a 24-hour rotation overlap the header carries one v1 entry per active secret;
+      accept the delivery when ANY v1 entry matches.
+  - name: SignSealShip-Event
+    note: Names the event topic.
+  deduplication: >-
+    Order-event ids are deterministic -- {topic}:{orderCode} -- so a redelivery deduplicates
+    cleanly on the consumer side.
+  payload_retention: >-
+    Event payload bodies are never stored and never returned by the delivery-inspection
+    endpoints; only attempt metadata is retained.
+topic_count: 7
+topics:
+- name: passport.sealed
+  family: passport
+  description: A Proof Passport was sealed.
+  available_via:
+  - POST /api/passport/webhooks (passport-only shortcut; no topic list)
+  - POST /api/partner/webhooks (topic-aware)
+- name: room.order_attached
+  family: room
+  description: An order was attached to a Verified Closing Room.
+  available_via: [POST /api/partner/webhooks]
+- name: room.passport_sealed
+  family: room
+  description: A Closing Passport version was sealed for a room.
+  available_via: [POST /api/partner/webhooks]
+- name: order.created
+  family: order
+  description: An order was created through the Order API.
+  scope: Delivers ONLY for orders the subscribing partner created through the Order API.
+  payload_note: >-
+    Shares one body shape with the other three order topics. Carries a deterministic id, the
+    order's status name at dispatch time, and externalReference echoing the external_reference
+    sent at order creation (omitted when none was sent).
+  available_via: [POST /api/partner/webhooks]
+- name: payment.cleared
+  family: order
+  description: Payment for an order cleared via the verified Stripe webhook.
+  scope: Partner's own Order-API orders only.
+  available_via: [POST /api/partner/webhooks]
+- name: signature.completed
+  family: order
+  description: The signing ceremony for an order completed.
+  scope: Partner's own Order-API orders only.
+  available_via: [POST /api/partner/webhooks]
+- name: shipment.delivered
+  family: order
+  description: The order's shipment was delivered.
+  scope: Partner's own Order-API orders only.
+  available_via: [POST /api/partner/webhooks]
+management_operations:
+- POST /api/partner/webhooks
+- GET /api/partner/webhooks
+- DELETE /api/partner/webhooks/{id}
+- POST /api/partner/webhooks/{id}/rotate
+- POST /api/partner/webhooks/{id}/test
+- GET /api/partner/webhooks/{id}/deliveries
+- GET /api/partner/webhooks/deliveries
+- GET /api/partner/webhooks/deliveries/{deliveryId}
+- POST /api/partner/webhooks/deliveries/{deliveryId}/replay
+- GET /api/partner/webhooks/signature-example
+- POST /api/passport/webhooks
+- DELETE /api/passport/webhooks/{id}
+auth:
+  management: >-
+    Partner bearer key OR the dashboard session cookie (__Host-session). Requires
+    webhooks:read / webhooks:write per the operation descriptions.
+  outbound: HMAC signature over the timestamped payload; the secret is shown exactly once.
+operator_affordances:
+- affordance: Signed test event
+  operation: POST /api/partner/webhooks/{id}/test
+- affordance: Signature verification recipe
+  operation: GET /api/partner/webhooks/signature-example
+  note: >-
+    The API itself serves the verification recipe, and the docs publish working Node and Python
+    verifier code. That is a materially better developer experience than most webhook surfaces.
+- affordance: Delivery replay
+  operation: POST /api/partner/webhooks/deliveries/{deliveryId}/replay
+  note: Returns the NEW delivery's id plus replayedFrom.
+- affordance: Cross-subscription delivery inspection
+  operation: GET /api/partner/webhooks/deliveries?topic=
+inbound_webhooks:
+  note: >-
+    Inbound vendor events (payments, notary sessions, shipping, mail) must pass signature
+    verification before processing; if a vendor's verification is not configured the route does
+    not exist in production. Fail closed, documented at https://signsealship.com/security.
+plan_gate: >-
+  Partner webhooks unlock at the $149/mo Pro Office tier. Partner Link explicitly does not
+  include them.
+gaps:
+- No AsyncAPI document.
+- >-
+  The OpenAPI 3.1 document declares no top-level `webhooks:` block, though 3.1 supports one.
+  Seven documented event payloads therefore have zero schema coverage.
+- No published retry schedule or backoff policy for failed deliveries.
+- No documented timeout for the consumer endpoint.

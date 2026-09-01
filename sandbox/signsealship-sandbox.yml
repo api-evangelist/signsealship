@@ -1,0 +1,95 @@
+generated: '2026-09-01'
+method: searched
+source: >-
+  openapi/signsealship-partner-api-openapi.yml (Sandbox tag) and
+  https://docs.signsealship.com/api-reference/orders
+docs: https://docs.signsealship.com/api-reference/orders
+published: true
+model: key-scoped environments
+summary: >-
+  There is no separate sandbox HOST. The environment is a property of the key: a test key drives
+  the same base URL, the same paths and the same webhook signing as a live key, and everything it
+  produces is permanently and visibly marked test on every surface, including public
+  verification. Two dedicated simulation endpoints let a partner walk a test order through the
+  real state machine and fire the real signed webhooks without a payment ever occurring.
+key_prefixes:
+- environment: live
+  prefix: sss_pk_
+- environment: test
+  prefix: sss_pk_test_
+  source: >-
+    Named verbatim in the description of POST /api/partner/sandbox/orders/{code}/checkout
+    ("a TEST order (created with a `sss_pk_test_` key)").
+environments:
+- name: live
+  base_url: https://signsealship.com
+- name: test
+  base_url: https://signsealship.com
+  note: Same host and same paths; the key decides the environment.
+evidence_marking:
+  field: environment
+  values: [live, test]
+  surfaces:
+  - ProofSealResponse.environment
+  - ProofPassport.environment
+  - ProofVerification.environment
+  verdict_enum:
+    verified: production evidence
+    verified_test: >-
+      A passport sealed with a TEST-environment key. The PUBLIC verifier flags it -- sandbox
+      evidence can never be laundered into production evidence, which for an evidence product is
+      the whole point of the environment split.
+simulation_endpoints:
+- operation: POST /api/partner/sandbox/orders/{code}/checkout
+  purpose: Deterministically simulate a payment outcome without minting a real Stripe session.
+  request_field: outcome
+  outcomes:
+  - value: success
+    effect: >-
+      Finishes the payment crossing exactly like the verified Stripe webhook -- the order lands
+      in its first purchased segment and payment.cleared fires with real HMAC signing. A replayed
+      success is a no-op.
+  - value: decline
+    effect: Parks the order at PaymentFailed; retry with a later success.
+  - value: cancel
+    effect: Parks the order at AwaitingPayment.
+  - value: delayed
+    effect: Parks the order at AwaitingPayment.
+  default: success
+  guard: A LIVE order sent here returns 409. Requires orders:write.
+- operation: POST /api/partner/sandbox/orders/{code}/advance
+  purpose: >-
+    Walk a TEST order forward along the happy path to the next lifecycle milestone, delivering
+    the real signed webhook for it.
+  request_field: event
+  milestones:
+  - payment.cleared
+  - signature.completed
+  - shipment.delivered
+  default: >-
+    Omit event (or send null) to cross whichever milestone is next; name one to walk to it.
+  guard: >-
+    409 when the order is not a test order, or when the milestone can never be reached by the
+    services that order actually purchased. Requires orders:write.
+  response: firedEvents[] names the webhook milestones the call actually delivered.
+webhook_fidelity: >-
+  Sandbox milestones deliver REAL signed webhooks -- same SignSealShip-Signature HMAC, same
+  SignSealShip-Event header, same deterministic {topic}:{orderCode} delivery id. A consumer can
+  therefore test its signature verification end to end without spending money.
+test_data:
+  test_cards: not published
+  test_bank_accounts: not published
+  test_clocks: not published
+  note: >-
+    Payment is simulated by the outcome enum rather than by test card numbers, because no Stripe
+    session is minted for a test order at all. There is consequently nothing to publish -- and no
+    test values were invented here.
+free_forever:
+  note: >-
+    Separately from the sandbox, the eight public read operations (room view, Closing Passport
+    verify + PDF, Proof Passport verify + document) need no credential of any kind, permanently.
+gaps:
+- No time simulation or test-clock facility for the 30-day approval_gate playbook wait.
+- >-
+  The sandbox exercises the ORDER lifecycle only. There is no simulation path for the Closing
+  Room, Closing Passport or notary-session surfaces beyond sealing with a test key.

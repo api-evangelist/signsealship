@@ -1,0 +1,279 @@
+generated: '2026-09-01'
+method: derived
+source: openapi/signsealship-partner-api-openapi.yml + probed tools/list on https://sign-seal-ship.main-kill-isr.mintlify.me/mcp
+note: The crosswalk is empty by construction and that IS the finding. SignSealShip publishes a 39-operation OpenAPI
+  and a live, anonymous MCP server, but the MCP server is the Mintlify documentation-search server bundled with
+  the docs site. Not one of its two tools reaches a Partner API operation, so crosswalk[] has no rows, both tools
+  land in mcp_only[], and every one of the 39 operations lands in rest_only[]. An agent can read the docs over MCP
+  and cannot act over MCP.
+surfaces:
+  openapi:
+    path: openapi/signsealship-partner-api-openapi.yml
+    url: https://docs.signsealship.com/api-reference/openapi.json
+    mirror: https://signsealship.com/openapi.json
+    gated: false
+    operations: 39
+  mcp:
+    url: https://sign-seal-ship.main-kill-isr.mintlify.me/mcp
+    gated: false
+    auth: none
+    introspected: true
+    tools: 2
+  graphql:
+    present: false
+    note: No GraphQL surface. https://signsealship.com/graphql returned 404.
+crosswalk: []
+mcp_only:
+- tool: search_sign_seal_ship_docs
+  reason: Documentation search over the Mintlify docs corpus. No backing REST operation; the docs are not part of
+    the Partner API.
+- tool: query_docs_filesystem_sign_seal_ship_docs
+  reason: Read-only virtual-filesystem query over the docs corpus. No backing REST operation.
+rest_only:
+- operation: POST /api/partner/request
+  operationId: null
+  tag: Onboarding
+  summary: Request partner access
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/partner/orders
+  operationId: null
+  tag: Orders
+  summary: Create an order
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/partner/orders
+  operationId: null
+  tag: Orders
+  summary: List your orders
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/partner/orders/{code}
+  operationId: null
+  tag: Orders
+  summary: Fetch an order
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/partner/orders/{code}/checkout
+  operationId: null
+  tag: Orders
+  summary: Mint a checkout session
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/partner/sandbox/orders/{code}/checkout
+  operationId: null
+  tag: Sandbox
+  summary: Simulate a checkout outcome
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/partner/sandbox/orders/{code}/advance
+  operationId: null
+  tag: Sandbox
+  summary: Advance a test order one milestone
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/rooms
+  operationId: null
+  tag: Closing Rooms
+  summary: Create a room
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/rooms
+  operationId: null
+  tag: Closing Rooms
+  summary: List your rooms
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/rooms/{roomCode}
+  operationId: null
+  tag: Closing Rooms
+  summary: Read the room (public)
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/rooms/{roomCode}/orders
+  operationId: null
+  tag: Closing Rooms
+  summary: Attach an order
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: DELETE /api/rooms/{roomCode}/orders/{orderCode}
+  operationId: null
+  tag: Closing Rooms
+  summary: Detach an order
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/rooms/{roomCode}/rotate
+  operationId: null
+  tag: Closing Rooms
+  summary: Rotate the room link
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/rooms/{roomCode}/passport
+  operationId: null
+  tag: Closing Passports
+  summary: Seal a passport version
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/verify/room/{verifyCode}
+  operationId: null
+  tag: Closing Passports
+  summary: Verify a passport (public)
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/verify/room/{verifyCode}/pdf
+  operationId: null
+  tag: Closing Passports
+  summary: Download the sealed certificate (public)
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/passport/seal
+  operationId: null
+  tag: Proof Passport
+  summary: Seal a document
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/passport/{id}
+  operationId: null
+  tag: Proof Passport
+  summary: Fetch a passport
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/passport/verify/{code}
+  operationId: null
+  tag: Proof Passport
+  summary: Verify a passport (public)
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/passport/verify/{code}/document
+  operationId: null
+  tag: Proof Passport
+  summary: Download the sealed document (public)
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/passport/webhooks
+  operationId: null
+  tag: Webhooks
+  summary: Register a passport webhook
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: DELETE /api/passport/webhooks/{id}
+  operationId: null
+  tag: Webhooks
+  summary: Delete a passport webhook
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/partner/me
+  operationId: null
+  tag: Orders
+  summary: Who am I
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/partner/launchpad
+  operationId: null
+  tag: Launchpad & Analytics
+  summary: Go-live checklist
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/partner/analytics
+  operationId: null
+  tag: Launchpad & Analytics
+  summary: Workspace analytics
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/partner/webhooks
+  operationId: null
+  tag: Webhooks
+  summary: List subscriptions
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/partner/webhooks
+  operationId: null
+  tag: Webhooks
+  summary: Create a subscription
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: DELETE /api/partner/webhooks/{id}
+  operationId: null
+  tag: Webhooks
+  summary: Delete a subscription
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/partner/webhooks/{id}/rotate
+  operationId: null
+  tag: Webhooks
+  summary: Rotate a signing secret
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/partner/webhooks/{id}/deliveries
+  operationId: null
+  tag: Webhooks
+  summary: List delivery attempts
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/partner/webhooks/deliveries
+  operationId: null
+  tag: Webhooks
+  summary: Inspect deliveries across subscriptions
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/partner/webhooks/deliveries/{deliveryId}
+  operationId: null
+  tag: Webhooks
+  summary: Inspect one delivery
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/partner/webhooks/{id}/test
+  operationId: null
+  tag: Webhooks
+  summary: Send a signed test event
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/partner/webhooks/deliveries/{deliveryId}/replay
+  operationId: null
+  tag: Webhooks
+  summary: Replay a delivery
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/partner/webhooks/signature-example
+  operationId: null
+  tag: Webhooks
+  summary: Signature verification recipe
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: GET /api/rooms/{roomCode}/participants
+  operationId: null
+  tag: Closing Rooms
+  summary: List the people on a closing
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/rooms/{roomCode}/participants
+  operationId: null
+  tag: Closing Rooms
+  summary: Add a person to a closing
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: DELETE /api/rooms/{roomCode}/participants/{participantId}
+  operationId: null
+  tag: Closing Rooms
+  summary: Remove a person from a closing
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+- operation: POST /api/calls/{code}/join
+  operationId: null
+  tag: Closing Rooms
+  summary: Join a closing call
+  reason: No MCP tool binds this operation. The only MCP server SignSealShip declares searches the documentation
+    corpus; it exposes no Partner API tools.
+coverage:
+  openapi_operations: 39
+  mcp_tools: 2
+  bound: 0
+  mcp_only: 2
+  rest_only: 39
+  operation_coverage_pct: 0.0
+observations:
+- Not one operation in the spec declares an operationId, so every REST identifier in rest_only[] is a METHOD+path
+  pair. An MCP tool generator, an SDK generator and a crosswalk all need stable operationIds; this spec supplies
+  none.
+- 'The Partner API would generate cleanly into tools: 39 operations, a single bearer scheme, an Idempotency-Key
+  header on the two money-moving writes, and eight endpoints that need no credential at all.'

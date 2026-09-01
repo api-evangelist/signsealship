@@ -1,0 +1,131 @@
+generated: '2026-09-01'
+method: searched
+source: >-
+  https://docs.signsealship.com/api-reference/authentication (docs) reconciled against
+  openapi/signsealship-partner-api-openapi.yml (contract) and
+  https://signsealship.com/.well-known/api-onboarding.json (onboarding descriptor)
+docs: https://docs.signsealship.com/api-reference/authentication
+summary:
+  types:
+  - apiKey
+  - http
+  api_key_in:
+  - cookie
+  oauth2: false
+  openid_connect: false
+  mutual_tls: false
+schemes:
+- name: partnerKey
+  type: http
+  scheme: bearer
+  bearerFormat: sss_pk_...
+  header: Authorization
+  description: 'Partner API key. Send as `Authorization: Bearer sss_pk_...`.'
+  key_format:
+    prefix: sss_pk_
+    test_prefix: sss_pk_test_
+    entropy: 256 bits after the prefix, lowercase base32
+    prefix_rationale: >-
+      Stated in the docs -- the prefix makes a leaked key recognizable in logs and secret
+      scanners.
+  storage: SHA-256 hash only; the raw key is never stored and cannot be recovered
+  display: shown to the holder exactly once, at issue, by email
+  env_var: SIGNSEALSHIP_PARTNER_KEY
+  env_var_source: https://signsealship.com/.well-known/api-onboarding.json
+  sources:
+  - openapi/signsealship-partner-api-openapi.yml
+  - https://docs.signsealship.com/api-reference/authentication
+- name: sessionCookie
+  type: apiKey
+  in: cookie
+  parameter: __Host-session
+  description: >-
+    SignSealShip dashboard login session cookie. Accepted by the /api/partner/webhooks
+    management routes as an alternative to the partner key.
+  cookie_prefix_note: >-
+    The __Host- prefix is a real hardening choice -- it forces Secure, host-only scope and a path
+    of /, so the cookie cannot be set by a subdomain.
+  rate_limit: partner-portal, 120/min per session
+  sources:
+  - openapi/signsealship-partner-api-openapi.yml
+anonymous_surface:
+  operations: 8
+  detail: >-
+    Eight read operations require no credential at all: the public room view, Closing Passport
+    verification and certificate download, and Proof Passport verification and document download.
+    POST /api/partner/request is also public and unauthenticated.
+  authorization_model: >-
+    Possession of the code IS the authorization. Room codes (40 hex), order codes and verify codes
+    (26 base32, 128 bits) are bearer credentials, not merely identifiers. They resolve one
+    SignSealShip-issued record and cannot be used for arbitrary querying -- an unknown code returns
+    404 {"verdict": "unknown"}, identical to a malformed one.
+issuance:
+  self_serve: true
+  endpoint: POST https://signsealship.com/api/partner/request
+  endpoint_auth: anonymous
+  rate_limit: partner-request, 5 per hour per IP
+  flow:
+  - Submit firm name, work email, role, expected volume and intended use case.
+  - >-
+    A business email domain plus a coherent, on-topic use case is issued a trial key instantly.
+    Anything else is queued for human review.
+  - The raw key is emailed to the submitted work address, once.
+  agent_blocker: >-
+    BOTH OUTCOMES RETURN HTTP 200. The status code does not distinguish an instant issue from a
+    queued review, and the key never appears in the response body -- only in an email. An agent
+    cannot complete onboarding end to end without reading a mailbox. The provider names this
+    itself in the gaps[] list of its own /.well-known/api-onboarding.json, alongside the absence
+    of RFC 7591 dynamic client registration.
+  console: https://signsealship.com/partner/settings/keys
+rotation:
+  api_keys:
+    self_serve: false
+    mechanism: >-
+      NO self-serve key-rotation endpoint exists. To rotate -- routinely or after a suspected leak
+      -- contact SignSealShip; a replacement is issued and the old key deactivated. Deactivation
+      is immediate once actioned, but it is a human step.
+    gap: >-
+      This is the weakest link in an otherwise careful credential design. A hashed, prefixed,
+      once-displayed key is good practice; requiring a human email to rotate it is not, and it
+      means incident response has a person in the critical path.
+  room_links:
+    self_serve: true
+    operation: POST /api/rooms/{roomCode}/rotate
+    effect: Every previously shared link dies instantly. Irreversible.
+  webhook_secrets:
+    self_serve: true
+    operation: POST /api/partner/webhooks/{id}/rotate
+    display: shown exactly once; only the hash is stored
+    overlap: >-
+      24 hours of dual signing -- the SignSealShip-Signature header carries one v1 entry per
+      active secret, and a consumer should accept when ANY entry matches. The machine-readable
+      form is previousSecretExpiresAt on RotateWebhookResponse.
+authorization:
+  model: coarse permission strings, not machine-declared
+  strings: [orders:read, orders:write, webhooks:read, webhooks:write]
+  declared_in: operation descriptions only
+  contradiction: >-
+    /.well-known/api-onboarding.json states "There is no scope-string model. Access is gated by
+    plan tier." The OpenAPI names four permission strings across nine operations. The two provider
+    documents disagree, and no securityScheme exposes a scopes map either way -- so a caller
+    cannot discover what its key is permitted to do until a call fails.
+  plan_gate: >-
+    Feature access really is tiered on top of this: the Order API and partner webhooks unlock at
+    the $149/mo Pro Office plan.
+failure_modes:
+  '401': >-
+    'A valid partner API key is required.' -- returned identically for a missing, malformed,
+    revoked or unknown key. Deliberately indistinguishable.
+  '403': >-
+    Reserved for a valid dashboard session that has not yet been linked to a partner. Before
+    2026-08-01, GET /api/partner/me also returned 403 for a missing credential; it now correctly
+    returns 401.
+transport:
+  tls: TLSv1.3 observed on both hosts
+  hsts: true, max-age 63072000
+  see: security/signsealship-domain-security.yml
+gaps:
+- No OAuth 2.0, no OIDC, no dynamic client registration (RFC 7591).
+- No self-serve API-key rotation.
+- No machine-readable scope or permission discovery.
+- Key delivery is out-of-band by email, which blocks fully programmatic onboarding.

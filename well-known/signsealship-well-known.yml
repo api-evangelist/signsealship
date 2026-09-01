@@ -1,0 +1,75 @@
+generated: '2026-09-01'
+method: probed
+source: live GET of each /.well-known/ path on every host named in apis.yml and in the OpenAPI servers[] block
+note: >-
+  Five documents are served. The apex host publishes an APIs.json index and an API Onboarding
+  Descriptor (aod 0.1); the Mintlify-hosted docs host publishes an A2A agent card and an MCP
+  discovery document. Classic IETF/OIDC well-knowns (security.txt, openid-configuration,
+  oauth-authorization-server, api-catalog) are absent on both hosts -- the apex 404 returns a
+  Next.js HTML error shell, which is a real 404 and not a document.
+hosts:
+- host: signsealship.com
+  documents:
+  - path: /.well-known/apis.json
+    status: 200
+    file: signsealship-apis.json
+    content_type: application/json
+    note: APIs.json 0.15 index naming the Partner API and the CC BY 4.0 RON-laws dataset.
+  - path: /.well-known/api-onboarding.json
+    status: 200
+    file: signsealship-api-onboarding.json
+    content_type: application/json
+    note: >-
+      API Onboarding Descriptor (aod 0.1). Declares maturity self-serve, agentPolicy allowed,
+      the four plan tiers, credential shape (api-key, prefix sss_pk_, one-time display) and a
+      self-declared gaps[] list.
+  - path: /.well-known/security.txt
+    status: 404
+  - path: /.well-known/openid-configuration
+    status: 404
+  - path: /.well-known/oauth-authorization-server
+    status: 404
+  - path: /.well-known/api-catalog
+    status: 404
+  - path: /.well-known/ai-plugin.json
+    status: 404
+  - path: /.well-known/agent-card.json
+    status: 404
+  - path: /.well-known/agent.json
+    status: 404
+  - path: /.well-known/mcp.json
+    status: 404
+- host: docs.signsealship.com
+  documents:
+  - path: /.well-known/agent-card.json
+    status: 200
+    file: ../a2a/signsealship-agent-card.json
+    content_type: application/json
+    note: >-
+      A2A agent card for the documentation surface. Graded in a2a/signsealship-a2a.yml.
+  - path: /.well-known/mcp.json
+    status: 200
+    file: signsealship-docs-mcp.json
+    content_type: application/json
+    note: >-
+      MCP discovery document pointing at a Mintlify-hosted documentation-search server. See
+      mcp/signsealship-mcp.yml -- it is a docs-search server, not the Partner API.
+  - path: /.well-known/agent-skills/sign/skill.md
+    status: 200
+    file: ../skills/signsealship-sign-skill.md
+    content_type: text/markdown
+    note: Provider-published Agent Skill, referenced by skills[0].url in the agent card.
+  - path: /.well-known/security.txt
+    status: 404
+  - path: /.well-known/openid-configuration
+    status: 404
+  - path: /.well-known/oauth-authorization-server
+    status: 404
+  - path: /.well-known/api-catalog
+    status: 404
+  - path: /.well-known/ai-plugin.json
+    status: 404
+  - path: /.well-known/agent.json
+    status: 404
+  - path: /.well-known/apis.json
+    status: 404

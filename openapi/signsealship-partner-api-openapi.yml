@@ -1,0 +1,2405 @@
+openapi: 3.1.0
+info:
+  title: SignSealShip Partner API
+  version: 1.0.0
+  description: 'The SignSealShip partner API: create sign / notarize / ship orders, create Verified Closing Rooms, seal Closing
+    Passports and Proof Passports, and manage webhooks. Partner endpoints authenticate with a bearer key (`Authorization:
+    Bearer sss_pk_...`); public verification endpoints need no key — possession of the verify, room, or order code is the
+    authorization. See the Guides for full prose, rate limits, and signature verification.'
+  contact:
+    name: SignSealShip
+    url: https://signsealship.com/partner
+servers:
+- url: https://signsealship.com
+  description: Production
+security:
+- partnerKey: []
+tags:
+- name: Onboarding
+  description: Request partner API access.
+- name: Orders
+  description: B2B order intake — create sign / notarize / ship orders, track them, and mint Stripe hosted checkout.
+- name: Sandbox
+  description: Deterministic lifecycle simulation for TEST orders (sss_pk_test_ keys) — real state machine, real signed webhooks,
+    no live money.
+- name: Launchpad & Analytics
+  description: Your workspace's go-live checklist and tenant-scoped analytics.
+- name: Closing Rooms
+  description: Verified Closing Rooms — one shareable page per transaction.
+- name: Closing Passports
+  description: Room-level, hash-chained, KMS-sealed evidence manifests.
+- name: Proof Passport
+  description: Seal and verify a single executed PDF.
+- name: Webhooks
+  description: Signed event delivery and subscription management.
+paths:
+  /api/partner/request:
+    post:
+      tags:
+      - Onboarding
+      summary: Request partner access
+      description: Request a partner API key self-serve. Public; rate limited to 5 requests per hour per IP. A business-domain
+        work email plus a coherent, on-topic use case is issued a trial key instantly (emailed once); everything else is queued
+        for human review. Both outcomes return 200.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerRequest'
+            example:
+              firmName: Maple Title Co.
+              contactName: Dana Reyes
+              workEmail: dana@mapletitle.com
+              role: Escrow officer
+              expectedVolume: 15 closings/month
+              useCase: Create a Verified Closing Room per escrow file and share the live link with buyers, sellers, and lenders.
+      responses:
+        '200':
+          description: Request accepted (issued or pending).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerRequestResponse'
+              example:
+                status: issued
+                message: Your Closing Rooms access is ready — check your email.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          description: More than 5 requests in an hour from one IP.
+  /api/partner/orders:
+    post:
+      tags:
+      - Orders
+      summary: Create an order
+      description: Create a sign / notarize / ship order for a client's own completed document. Send the PDF as the multipart
+        part `document`, or reference a fill-online result with `fill_token` — exactly one of the two, never both. Pricing
+        is computed entirely server-side from the B2B price book with your subscription tier's discount applied automatically;
+        there is no client-sent amount anywhere in the API. Order state advances only via the verified Stripe webhook — minting
+        a checkout session (or a payer landing on the success page) never changes state. Rate limited with `partner-write`
+        (60/min per key).
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Order created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+              example:
+                orderCode: an-order-public-code
+                orderUrl: /orders/an-order-public-code
+                status: QuoteReady
+                externalReference: MATTER-2291
+                subtotalCents: 7635
+                discountCents: 500
+                totalCents: 7135
+                lines:
+                - type: WorkflowFee
+                  label: Document workflow
+                  amountCents: 1200
+                - type: NotaryFee
+                  label: Online notarization
+                  amountCents: 2500
+                - type: ShippingCarrierRate
+                  label: Carrier postage (rated for your address)
+                  amountCents: 2440
+                - type: ShippingHandlingFee
+                  label: Shipping & handling
+                  amountCents: 1495
+                - type: Discount
+                  label: Code WELCOME5
+                  amountCents: -500
+                checkoutUrl: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Orders
+      summary: List your orders
+      description: List the orders created with your partner key, newest first. Rate limited with `partner-write` (60/min
+        per key).
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        description: Page size. Default 20, maximum 100.
+      - name: status
+        in: query
+        schema:
+          type: string
+        description: Filter by order status name (e.g. `QuoteReady`, `Paid`, `Completed`).
+      - name: external_reference
+        in: query
+        schema:
+          type: string
+        description: Filter to orders created with this `external_reference`.
+      responses:
+        '200':
+          description: Your orders.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrderSummary'
+                  requestId:
+                    type: string
+                    description: This request's id — quote it in support tickets.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/partner/orders/{code}:
+    get:
+      tags:
+      - Orders
+      summary: Fetch an order
+      description: 'Fetch one of your orders by its public code. Partner-scoped: another partner''s order and an unknown code
+        return the identical 404. Rate limited with `partner-write` (60/min per key).'
+      parameters:
+      - $ref: '#/components/parameters/OrderCode'
+      responses:
+        '200':
+          description: The order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Unknown code — or another partner's order; the two are indistinguishable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/partner/orders/{code}/checkout:
+    post:
+      tags:
+      - Orders
+      summary: Mint a checkout session
+      description: Mint the Stripe hosted-checkout URL for a payable order. Minting never changes order state — state advances
+        only via the verified Stripe webhook after payment clears. Rate limited with `partner-write` (60/min per key).
+      parameters:
+      - $ref: '#/components/parameters/OrderCode'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Checkout session minted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkoutUrl:
+                    type: string
+                    description: The Stripe hosted-checkout URL to hand to the payer.
+                  requestId:
+                    type: string
+                    description: This request's id — quote it in support tickets.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Unknown code — or another partner's order; the two are indistinguishable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: The order is not payable in its current state (for example, awaiting a manual quote).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Stripe failed to create the session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Payments are not configured.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/partner/sandbox/orders/{code}/checkout:
+    post:
+      tags:
+      - Sandbox
+      summary: Simulate a checkout outcome
+      description: Deterministically simulate the payment outcome for a TEST order (created with a `sss_pk_test_` key). `success`
+        finishes the payment crossing exactly like the verified Stripe webhook — the order lands in its first purchased segment
+        and the `payment.cleared` webhook fires with real HMAC signing; a replayed success is a no-op. `decline` parks the
+        order at PaymentFailed (retry with a later success), `cancel`/`delayed` park it at AwaitingPayment. No real Stripe
+        session is ever minted for a test order. Requires `orders:write`; a LIVE order here is a 409.
+      parameters:
+      - $ref: '#/components/parameters/OrderCode'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                outcome:
+                  type: string
+                  enum:
+                  - success
+                  - decline
+                  - cancel
+                  - delayed
+                  default: success
+            example:
+              outcome: success
+      responses:
+        '200':
+          description: The simulated outcome was applied.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderCode:
+                    type: string
+                  outcome:
+                    type: string
+                  checkoutUrl:
+                    type: string
+                    description: A sandbox checkout link — no real payment page.
+                  status:
+                    type: string
+                    description: The order's status after the simulation.
+                  firedEvents:
+                    type: array
+                    items:
+                      type: string
+                    description: Webhook milestones this call fired (real signed deliveries).
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Unknown code — or another partner's order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Not a test order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/partner/sandbox/orders/{code}/advance:
+    post:
+      tags:
+      - Sandbox
+      summary: Advance a test order one milestone
+      description: Walk a TEST order forward along the happy path until the next lifecycle milestone fires — `payment.cleared`,
+        `signature.completed`, or `shipment.delivered` — delivering the real signed webhook for it. Omit `event` (or send
+        null) to cross whichever milestone is next; name one to walk to it. A milestone the order's purchased services can
+        never reach is a 409. Requires `orders:write`.
+      parameters:
+      - $ref: '#/components/parameters/OrderCode'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event:
+                  type:
+                  - string
+                  - 'null'
+                  enum:
+                  - payment.cleared
+                  - signature.completed
+                  - shipment.delivered
+                  - null
+            example:
+              event: signature.completed
+      responses:
+        '200':
+          description: The order advanced.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderCode:
+                    type: string
+                  status:
+                    type: string
+                  firedEvents:
+                    type: array
+                    items:
+                      type: string
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Unknown code — or another partner's order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Not a test order, or the milestone does not apply to the purchased services.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/rooms:
+    post:
+      tags:
+      - Closing Rooms
+      summary: Create a room
+      description: 'Create a Verified Closing Room. Enforces your tier''s active-room quota (trial and PartnerLink: 5 open
+        rooms; ProOffice: 25; ClosingDesk: unlimited).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoomRequest'
+            example:
+              name: 1428 Maple St — Refinance
+              reference: TC-88412
+      responses:
+        '200':
+          description: Room created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateRoomResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags:
+      - Closing Rooms
+      summary: List your rooms
+      description: Returns your own rooms only, newest first.
+      responses:
+        '200':
+          description: Your rooms.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rooms:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RoomSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/rooms/{roomCode}:
+    get:
+      tags:
+      - Closing Rooms
+      summary: Read the room (public)
+      description: 'Public read by possession of the room code — no API key. The same live JSON the room page renders. Codes
+        outside the 24–64 character gate and unknown codes both return an empty 404. Responses are `Cache-Control: no-store`.'
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      responses:
+        '200':
+          description: The live room view.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomView'
+        '404':
+          description: Unknown or malformed room code.
+  /api/rooms/{roomCode}/orders:
+    post:
+      tags:
+      - Closing Rooms
+      summary: Attach an order
+      description: 'Attach an order to a room. Authorization is possession of the order''s public code. Idempotent — re-attaching
+        succeeds with `alreadyAttached: true`. A room holds at most 50 orders.'
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttachOrderRequest'
+            example:
+              orderCode: the-orders-public-code
+              label: Seller deed package
+      responses:
+        '200':
+          description: Attached (or already attached).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  alreadyAttached:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/rooms/{roomCode}/orders/{orderCode}:
+    delete:
+      tags:
+      - Closing Rooms
+      summary: Detach an order
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      - name: orderCode
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The attached order's public code.
+      responses:
+        '200':
+          description: Detached.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/rooms/{roomCode}/rotate:
+    post:
+      tags:
+      - Closing Rooms
+      summary: Rotate the room link
+      description: Reissue the room's bearer code. Every previously shared link dies instantly — the mitigation for a leaked
+        or over-shared link.
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      responses:
+        '200':
+          description: New code issued.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roomCode:
+                    type: string
+                  roomUrl:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/rooms/{roomCode}/passport:
+    post:
+      tags:
+      - Closing Passports
+      summary: Seal a passport version
+      description: Mint the next Closing Passport version for a room — a dated, hash-chained, KMS-sealed snapshot, never an
+        overwrite. Capped at 20 versions per room. Requires your partner key; the room must be yours.
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      responses:
+        '200':
+          description: Passport version sealed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassportSealResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/verify/room/{verifyCode}:
+    get:
+      tags:
+      - Closing Passports
+      summary: Verify a passport (public)
+      description: 'Public verification of a Closing Passport version. `chainOk` is recomputed on every call, never a stored
+        verdict. Malformed and unknown codes return the identical generic 404 `{"verdict": "unknown"}`.'
+      security: []
+      parameters:
+      - name: verifyCode
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The passport's 26-character verification code.
+      responses:
+        '200':
+          description: The verified passport version and its recomputed chain state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomPassportVerification'
+        '404':
+          description: Unknown or malformed code.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verdict:
+                    type: string
+                    example: unknown
+  /api/verify/room/{verifyCode}/pdf:
+    get:
+      tags:
+      - Closing Passports
+      summary: Download the sealed certificate (public)
+      description: Streams the sealed Closing Passport certificate PDF. The verify code is the bearer.
+      security: []
+      parameters:
+      - name: verifyCode
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The sealed certificate PDF.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Unknown code or unavailable artifact.
+  /api/passport/seal:
+    post:
+      tags:
+      - Proof Passport
+      summary: Seal a document
+      description: Submit a finished, signed PDF (multipart part named `file`, up to 35 MB). It returns sealed with Google
+        Cloud KMS, timestamped by independent RFC 3161 and OpenTimestamps authorities, and wrapped in a public verification
+        URL. Bytes are streamed in memory, never to disk, and discarded after sealing.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The executed PDF. Maximum 35 MB.
+      responses:
+        '200':
+          description: Document sealed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProofSealResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/passport/{id}:
+    get:
+      tags:
+      - Proof Passport
+      summary: Fetch a passport
+      description: Fetch a Proof Passport you created. Partner isolation is enforced — a passport is visible only to the partner
+        that created it.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The passport's UUID from the seal response.
+      responses:
+        '200':
+          description: The passport (seal fields minus timestamps, plus createdAt).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProofPassport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No such passport (including another partner's).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/passport/verify/{code}:
+    get:
+      tags:
+      - Proof Passport
+      summary: Verify a passport (public)
+      description: 'Public, self-contained verification of a Proof Passport. Never exposes the partner identity. Malformed
+        and unknown codes return the identical generic 404 `{"verdict": "unknown"}`.'
+      security: []
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The 26-character verify code.
+      responses:
+        '200':
+          description: Verification result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProofVerification'
+        '404':
+          description: Unknown or malformed code.
+  /api/passport/verify/{code}/document:
+    get:
+      tags:
+      - Proof Passport
+      summary: Download the sealed document (public)
+      description: Streams the byte-identical sealed PDF. Any holder of the code can fetch it; the file also verifies on its
+        own in any PDF reader's signature panel.
+      security: []
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The sealed PDF.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Unknown code or missing artifact.
+  /api/passport/webhooks:
+    post:
+      tags:
+      - Webhooks
+      summary: Register a passport webhook
+      description: Register an https endpoint for `passport.sealed` events using your partner API key. The signing secret
+        is returned exactly once — only its hash is stored. Subscriptions created this way receive only `passport.sealed`
+        (no room events).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: Your https webhook endpoint.
+            example:
+              url: https://example.com/hooks/signsealship
+      responses:
+        '200':
+          description: Webhook registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassportWebhookResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/passport/webhooks/{id}:
+    delete:
+      tags:
+      - Webhooks
+      summary: Delete a passport webhook
+      description: 'Unregister a subscription created by `POST /api/passport/webhooks`, using your partner API key. Partner-scoped:
+        another partner''s id and an unknown id return the identical 404.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The `webhookId` returned at registration.
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                  webhookId:
+                    type: string
+                    format: uuid
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Unknown id — or another partner's subscription; the two are indistinguishable.
+  /api/partner/me:
+    get:
+      tags:
+      - Orders
+      summary: Who am I
+      description: 'The identity behind your API key: firm name, subscription tier, whether live keys are enabled for the
+        account, and whether this key is a `test` or `live` key. Powers connection labels in integrations (e.g. Zapier).'
+      responses:
+        '200':
+          description: The key's own account.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  firmName:
+                    type: string
+                  tier:
+                    type: string
+                  liveEnabled:
+                    type: boolean
+                  environment:
+                    type: string
+                    enum:
+                    - test
+                    - live
+        '401':
+          description: No valid credential presented — send a partner API key, or sign in and link a session. Returned 403
+            before 2026-08-01.
+        '403':
+          description: Your session is valid but is not linked to a partner. Link one at https://signsealship.com/partner
+            with a partner API key.
+  /api/partner/launchpad:
+    get:
+      tags:
+      - Launchpad & Analytics
+      summary: Go-live checklist
+      description: 'Your account''s activation state: the go-live checklist (each step with a deep link to complete it), the
+        funnel of steps already reached, whether the account is ready for live keys, and the hours from signup to your first
+        live order. Accepts the partner API key or the dashboard session.'
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      responses:
+        '200':
+          description: The activation state.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  partner:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      tier:
+                        type: string
+                  readyForLive:
+                    type: boolean
+                  completed:
+                    type: integer
+                  total:
+                    type: integer
+                  checklist:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        label:
+                          type: string
+                        done:
+                          type: boolean
+                        action:
+                          type: string
+                        deepLink:
+                          type: string
+                  funnel:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        step:
+                          type: string
+                        reached:
+                          type: boolean
+                        at:
+                          type:
+                          - string
+                          - 'null'
+                          format: date-time
+                  hoursToFirstLiveOrder:
+                    type:
+                    - number
+                    - 'null'
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/partner/analytics:
+    get:
+      tags:
+      - Launchpad & Analytics
+      summary: Workspace analytics
+      description: 'A tenant-scoped analytics snapshot over a trailing window: monthly order volume, the created→paid→completed
+        funnel, turnaround hours (median and p90), service mix, evidence coverage, and revenue. Accepts the partner API key
+        (needs `orders:read`) or the dashboard session.'
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: days
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 366
+          default: 90
+        description: Trailing window in days.
+      responses:
+        '200':
+          description: The snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: windowDays, volumeByMonth[], funnel {created,paid,inProgress,completed,problem}, turnaroundHours
+                  {median,p90}, serviceMix {sign,notarize,ship,fax}, evidence, revenueCents, generatedAt.
+                properties:
+                  windowDays:
+                    type: integer
+                  generatedAt:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The API key lacks the `orders:read` scope.
+  /api/partner/webhooks:
+    get:
+      tags:
+      - Webhooks
+      summary: List subscriptions
+      description: 'List your partner''s webhook subscriptions, newest first. Accepts your partner API key (`Authorization:
+        Bearer sss_pk_...`) for server-to-server management, or the SignSealShip dashboard session cookie (`__Host-session`)
+        — link a session once with a partner key at https://signsealship.com/partner.'
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      responses:
+        '200':
+          description: Your subscriptions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WebhookSubscription'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Session not linked to a partner.
+    post:
+      tags:
+      - Webhooks
+      summary: Create a subscription
+      description: Create a topic-aware webhook subscription. Accepts the partner API key or the dashboard session cookie.
+        The signing secret is shown exactly once. Order topics (`order.created`, `payment.cleared`, `signature.completed`,
+        `shipment.delivered`) deliver only for orders you created through the Order API.
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+            example:
+              url: https://example.com/hooks/signsealship
+              topics:
+              - order.created
+              - payment.cleared
+              - room.passport_sealed
+      responses:
+        '200':
+          description: Subscription created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateWebhookResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Session not linked to a partner.
+  /api/partner/webhooks/{id}:
+    delete:
+      tags:
+      - Webhooks
+      summary: Delete a subscription
+      description: Delete a subscription. Accepts the partner API key or the dashboard session cookie.
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The subscription id.
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Session not linked to a partner.
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/partner/webhooks/{id}/rotate:
+    post:
+      tags:
+      - Webhooks
+      summary: Rotate a signing secret
+      description: Reissue the subscription's signing secret. The new secret is returned exactly once — only its hash is stored.
+        For 24 hours deliveries are signed with both the old and the new secret (one `v1` entry each in the `SignSealShip-Signature`
+        header), so your endpoint can cut over without dropping verification; after the overlap the old secret stops signing.
+        Accepts the partner API key or the dashboard session cookie.
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The subscription id.
+      responses:
+        '200':
+          description: New secret issued — shown exactly once.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotateWebhookResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Session not linked to a partner.
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/partner/webhooks/{id}/deliveries:
+    get:
+      tags:
+      - Webhooks
+      summary: List delivery attempts
+      description: A metadata-only feed of the subscription's recent delivery attempts — what was attempted, when, and how
+        your endpoint answered. Event payload bodies are never stored or returned. Accepts the partner API key or the dashboard
+        session cookie.
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The subscription id.
+      responses:
+        '200':
+          description: Delivery attempt metadata, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - deliveries
+                properties:
+                  deliveries:
+                    type: array
+                    items:
+                      type: object
+                      description: One delivery attempt's metadata (never the payload body).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Session not linked to a partner.
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/partner/webhooks/deliveries:
+    get:
+      tags:
+      - Webhooks
+      summary: Inspect deliveries across subscriptions
+      description: The delivery feed across ALL of your subscriptions, filterable. Metadata only — payload bodies are redacted.
+        Accepts the partner API key (needs `webhooks:read`) or the dashboard session.
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+      - name: topic
+        in: query
+        schema:
+          type: string
+        description: Filter to one event topic.
+      - name: order
+        in: query
+        schema:
+          type: string
+        description: Filter to one order's public code.
+      - name: external_reference
+        in: query
+        schema:
+          type: string
+        description: Filter to orders created with this reference.
+      - name: status
+        in: query
+        schema:
+          type: string
+        description: Filter by delivery state (e.g. `delivered`, `failed`, `retrying`).
+      responses:
+        '200':
+          description: Matching deliveries, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - deliveries
+                properties:
+                  deliveries:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        deliveryId:
+                          type: string
+                        eventName:
+                          type: string
+                        state:
+                          type: string
+                        attempts:
+                          type: integer
+                        lastStatusCode:
+                          type:
+                          - integer
+                          - 'null'
+                        nextAttemptAt:
+                          type:
+                          - string
+                          - 'null'
+                          format: date-time
+                        destinationUrl:
+                          type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Session not linked to a partner, or the key lacks `webhooks:read`.
+  /api/partner/webhooks/deliveries/{deliveryId}:
+    get:
+      tags:
+      - Webhooks
+      summary: Inspect one delivery
+      description: 'One delivery''s detail: the redacted request body, the signature header name, and the full attempt history
+        (status codes, timing). Accepts the partner API key (needs `webhooks:read`) or the dashboard session.'
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: deliveryId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The delivery id from a delivery list.
+      responses:
+        '200':
+          description: The delivery detail (payload redacted).
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Delivery metadata, redacted body preview, and attempt history.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/partner/webhooks/{id}/test:
+    post:
+      tags:
+      - Webhooks
+      summary: Send a signed test event
+      description: Deliver a signed synthetic event to the subscription's endpoint right now — the fastest way to prove your
+        signature verification end to end. Requires `webhooks:write` (or the dashboard session).
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The subscription id.
+      responses:
+        '200':
+          description: Test event queued/delivered.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  deliveryId:
+                    type: string
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/partner/webhooks/deliveries/{deliveryId}/replay:
+    post:
+      tags:
+      - Webhooks
+      summary: Replay a delivery
+      description: Re-send a past delivery's event as a brand-new signed delivery to the same subscription. Requires `webhooks:write`
+        (or the dashboard session).
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: deliveryId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The delivery id to replay.
+      responses:
+        '200':
+          description: A new delivery was created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  deliveryId:
+                    type: string
+                    description: The NEW delivery's id.
+                  replayedFrom:
+                    type: string
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No such delivery, or its endpoint was deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/partner/webhooks/signature-example:
+    get:
+      tags:
+      - Webhooks
+      summary: Signature verification recipe
+      description: The signature header name and a worked verification example (Node.js). Deliberately public — a static docs
+        recipe with no tenant data, readable before you hold a key.
+      security: []
+      responses:
+        '200':
+          description: The recipe.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signatureHeader:
+                    type: string
+                  example:
+                    type: string
+                  requestId:
+                    type: string
+  /api/rooms/{roomCode}/participants:
+    get:
+      tags:
+      - Closing Rooms
+      summary: List the people on a closing
+      description: The roster for one of YOUR rooms, with real email addresses. The public room view (`GET /api/rooms/{roomCode}`)
+        returns the same people with masked emails, because the room link is a bearer key.
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      responses:
+        '200':
+          description: The live roster. Removed participants are excluded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  participants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RoomParticipant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+      - Closing Rooms
+      summary: Add a person to a closing
+      description: 'Record who this transaction involves — the buyer, the seller, the loan officer.
+
+
+        **This grants no access.** A participant is a name and an email; the room is still reached by possession of its link,
+        and removing someone here does not revoke a link they already hold (rotate the room code for that).
+
+
+        Idempotent on a live email address (case-insensitive): re-adding someone already on the deal succeeds with `alreadyPresent:
+        true`. A room holds at most 25 participants.'
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddParticipantRequest'
+            example:
+              name: Dana Buyer
+              email: dana@example.com
+              role: client
+      responses:
+        '200':
+          description: Added (or already present).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  alreadyPresent:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/rooms/{roomCode}/participants/{participantId}:
+    delete:
+      tags:
+      - Closing Rooms
+      summary: Remove a person from a closing
+      description: Takes someone off the live roster. The underlying row is retained — who was on a deal at the time a document
+        was executed is part of the record, not a mutable list — so this is not a deletion of history. Re-adding the same
+        person later creates a new entry.
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      - name: participantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The participant's id, from the list response.
+      responses:
+        '200':
+          description: Removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/calls/{code}/join:
+    post:
+      tags:
+      - Closing Rooms
+      summary: Join a closing call
+      description: 'Redeems a party''s call invite.
+
+
+        The code is a bearer capability for **calls only** — it never returns the room view, the orders, or any document,
+        and it is **inert unless a call is actually running**. A `live: false` response means the link is genuine but the
+        firm has not started the call yet; a `404` covers wrong, expired, and revoked codes alike, so probing codes reveals
+        nothing.
+
+
+        Calls are **not recorded**. No recording, transcript, or sealed artifact is produced.
+
+
+        Invites are issued from the partner dashboard (session-authenticated); there is no partner-API-key route for starting
+        a call.'
+      security: []
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The invite code from the join link.
+      responses:
+        '200':
+          description: Either LiveKit credentials, or an honest not-started answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallJoinResponse'
+        '404':
+          description: Unknown, expired, or revoked invite — deliberately indistinguishable.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                    - invite_not_found
+        '503':
+          description: Calling is not configured on this deployment.
+components:
+  securitySchemes:
+    partnerKey:
+      type: http
+      scheme: bearer
+      bearerFormat: sss_pk_...
+      description: 'Partner API key. Send as `Authorization: Bearer sss_pk_...`.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-session
+      description: SignSealShip dashboard login session cookie. Accepted by the `/api/partner/webhooks` management routes
+        as an alternative to the partner key.
+  parameters:
+    RoomCode:
+      name: roomCode
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The room's bearer code (40 lowercase hex characters; the read endpoint accepts 24–64).
+    OrderCode:
+      name: code
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The order's public code from the create response.
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 255
+      description: Optional. Retries carrying the same key replay the original response instead of acting twice. 8–255 characters;
+        scope one key to one logical action.
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing, malformed, revoked, or unknown partner key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: A valid partner API key is required.
+    NotFound:
+      description: Not found. Unknown codes read as a generic not-found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    PartnerRequest:
+      type: object
+      required:
+      - firmName
+      - contactName
+      - workEmail
+      properties:
+        firmName:
+          type: string
+          maxLength: 200
+          description: Your firm or company name.
+        contactName:
+          type: string
+          maxLength: 200
+          description: The requester's full name.
+        workEmail:
+          type: string
+          format: email
+          maxLength: 254
+          description: A deliverable work email. The issued key is sent here; a business domain is the strongest signal for
+            instant issue.
+        role:
+          type: string
+          maxLength: 120
+          description: Your role at the firm (e.g. "Escrow officer").
+        expectedVolume:
+          type: string
+          maxLength: 120
+          description: Rough expected volume (e.g. "10-20 closings/month").
+        useCase:
+          type: string
+          maxLength: 4000
+          description: What you plan to build or run on the API.
+        recaptchaToken:
+          type: string
+          description: Optional bot-screening token; omit when calling the API directly.
+    PartnerRequestResponse:
+      type: object
+      required:
+      - status
+      - message
+      properties:
+        status:
+          type: string
+          enum:
+          - issued
+          - pending
+          description: '`issued` — a trial key was created and emailed. `pending` — queued for human review.'
+        message:
+          type: string
+          description: A browser-safe confirmation message.
+    CreateOrderRequest:
+      type: object
+      required:
+      - email
+      - byod_confirmed
+      description: Multipart form fields. Send exactly one of `document` or `fill_token` — never both.
+      properties:
+        document:
+          type: string
+          format: binary
+          description: The client's own completed PDF, up to 35 MB. Mutually exclusive with `fill_token`.
+        fill_token:
+          type: string
+          pattern: ^[0-9a-f]{40}$
+          description: A 40-character lowercase-hex token from the fill-online rail, in place of a `document` upload. Mutually
+            exclusive with `document`.
+        email:
+          type: string
+          format: email
+          description: The signer / client email. Required.
+        name:
+          type: string
+          description: The signer / client name.
+        doc_slug:
+          type: string
+          description: Catalog document slug. When present, the catalog row defines the sign / notary services; shipping stays
+            additive via `svc_ship`.
+        svc_sign:
+          type: string
+          enum:
+          - 'true'
+          - 'on'
+          description: Include e-signing.
+        svc_notary:
+          type: string
+          enum:
+          - 'true'
+          - 'on'
+          description: Include online notarization.
+        svc_ship:
+          type: string
+          enum:
+          - 'true'
+          - 'on'
+          description: Include shipping — send the `ship_*` address fields with it.
+        signer_state:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: Two-letter US state where the signer is located.
+        dest_state:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: Two-letter US state the shipment is destined for.
+        byod_confirmed:
+          type: string
+          enum:
+          - 'true'
+          - 'on'
+          description: Required. Attests that this is the client's own completed document (bring-your-own-document).
+        external_reference:
+          type: string
+          maxLength: 120
+          description: Your own matter / file number, up to 120 characters. Echoed on webhook events and listings.
+        ship_name:
+          type: string
+          description: Recipient name (when shipping).
+        ship_line1:
+          type: string
+          description: Address line 1 (when shipping).
+        ship_line2:
+          type: string
+          description: Address line 2.
+        ship_city:
+          type: string
+          description: City (when shipping).
+        ship_state:
+          type: string
+          description: Two-letter US state (when shipping).
+        ship_postal:
+          type: string
+          description: ZIP / postal code (when shipping).
+        ship_method:
+          type: string
+          enum:
+          - label
+          - print_mail
+          description: Delivery method when shipping is selected. `label` (default) buys a prepaid carrier label; `print_mail`
+            has SignSealShip print and mail the completed document ($12.95 line, replacing the label handling fee). Unrecognized
+            values fall back to `label`.
+        from_name:
+          type: string
+          description: 'Optional sender / return address (all of `from_line1`, `from_city`, `from_state`, `from_postal` must
+            accompany it): printed as the return address on print-and-mail letters and used as the ship-from on prepaid labels,
+            so rates price from the true origin and undeliverable mail returns to the actual sender. Absent ⇒ the platform
+            business address.'
+        from_line1:
+          type: string
+          description: Return address street line 1.
+        from_line2:
+          type: string
+          description: Return address street line 2.
+        from_city:
+          type: string
+          description: Return address city.
+        from_state:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: Return address two-letter US state.
+        from_postal:
+          type: string
+          description: Return address ZIP / postal code.
+        fax_to:
+          type: string
+          description: 'Adds sealed fax delivery ($9.00): a 10-digit US number or an international number in `+country` format,
+            normalized to E.164. An uninterpretable number is rejected with a 400 — never silently dropped.'
+        create_checkout:
+          type: string
+          enum:
+          - 'true'
+          - 'on'
+          description: Also mint the Stripe hosted-checkout session in the same call and return it as `checkoutUrl`.
+    OrderLine:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Machine-readable line type.
+        label:
+          type: string
+          description: Display label for the line.
+        amountCents:
+          type: integer
+          description: Line amount in USD cents.
+    OrderServices:
+      type: string
+      description: 'Which services the order includes, as a comma-separated flags string. Possible flags: `Sign`, `Notarize`,
+        `Ship`, `Fax`. Parse by splitting on `", "` — this is NOT an object of booleans (corrected 2026-08-01; the schema
+        previously mis-documented it as one).'
+      example: Sign, Notarize, Ship
+    CreateOrderResponse:
+      type: object
+      properties:
+        requestId:
+          type: string
+          description: This request's id — quote it in support tickets.
+        orderCode:
+          type: string
+          description: The order's public code.
+        orderUrl:
+          type: string
+          description: Root-relative path to the order page, `/orders/{orderCode}`.
+        status:
+          type: string
+          description: The order's status name (e.g. `QuoteReady`).
+        externalReference:
+          type:
+          - string
+          - 'null'
+          description: The `external_reference` you sent, or `null`.
+        faxToNumber:
+          type:
+          - string
+          - 'null'
+          description: The normalized E.164 fax destination when `fax_to` was sent, or `null`.
+        subtotalCents:
+          type: integer
+        discountCents:
+          type: integer
+          description: Your subscription-tier discount, computed and applied server-side.
+        totalCents:
+          type: integer
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+        checkoutUrl:
+          type:
+          - string
+          - 'null'
+          description: The Stripe hosted-checkout URL. `null` unless `create_checkout=true` was sent, payments are configured,
+            and the order is payable — a ManualQuoteRequired order returns no checkout.
+    OrderSummary:
+      type: object
+      properties:
+        orderCode:
+          type: string
+        status:
+          type: string
+        services:
+          $ref: '#/components/schemas/OrderServices'
+        totalCents:
+          type: integer
+        externalReference:
+          type:
+          - string
+          - 'null'
+        customerEmail:
+          type: string
+          description: The signer / client email from the create call.
+        createdAt:
+          type: string
+          format: date-time
+    OrderDetail:
+      type: object
+      properties:
+        requestId:
+          type: string
+          description: This request's id — quote it in support tickets.
+        orderCode:
+          type: string
+        orderUrl:
+          type: string
+        status:
+          type: string
+        services:
+          $ref: '#/components/schemas/OrderServices'
+        envelopeStatus:
+          type:
+          - string
+          - 'null'
+          description: The e-sign envelope's status when the order includes signing, else `null`.
+        externalReference:
+          type:
+          - string
+          - 'null'
+        customerEmail:
+          type: string
+        subtotalCents:
+          type: integer
+        discountCents:
+          type: integer
+        totalCents:
+          type: integer
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+        createdAt:
+          type: string
+          format: date-time
+    CreateRoomRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Display name shown to every party (e.g. a property address).
+        reference:
+          type: string
+          maxLength: 200
+          description: Your internal file number.
+    CreateRoomResponse:
+      type: object
+      properties:
+        roomCode:
+          type: string
+          description: The room's bearer code — 40 lowercase hex characters.
+        roomUrl:
+          type: string
+          description: Root-relative path to the shareable page, `/rooms/{roomCode}`.
+        name:
+          type: string
+        reference:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          example: open
+        createdAt:
+          type: string
+          format: date-time
+    RoomSummary:
+      type: object
+      properties:
+        roomCode:
+          type: string
+        name:
+          type: string
+        reference:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          example: open
+        orderCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AttachOrderRequest:
+      type: object
+      required:
+      - orderCode
+      properties:
+        orderCode:
+          type: string
+          minLength: 24
+          maxLength: 64
+          description: The order's public code.
+        label:
+          type: string
+          description: A display label for the document card.
+    Branding:
+      type:
+      - object
+      - 'null'
+      properties:
+        brandName:
+          type:
+          - string
+          - 'null'
+        accentColor:
+          type:
+          - string
+          - 'null'
+          description: Hex color like `#1a2b3c`.
+        logoUrl:
+          type:
+          - string
+          - 'null'
+          description: Public https URL of the partner's logo.
+    RoomView:
+      type: object
+      properties:
+        roomCode:
+          type: string
+        name:
+          type: string
+        reference:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          example: open
+        partnerName:
+          type: string
+        branding:
+          $ref: '#/components/schemas/Branding'
+        progress:
+          type: object
+          properties:
+            total:
+              type: integer
+            signed:
+              type: integer
+            sealed:
+              type: integer
+            delivered:
+              type: integer
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomOrderCard'
+        activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityItem'
+        passport:
+          $ref: '#/components/schemas/RoomPassportInfo'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    RoomOrderCard:
+      type: object
+      properties:
+        orderCode:
+          type: string
+        label:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          description: Raw platform status (e.g. `EsignPending`). Build logic on `statusGroup`.
+        statusGroup:
+          type: string
+          enum:
+          - signing
+          - signed
+          - notarizing
+          - notarized
+          - shipping
+          - shipped
+          - delivered
+          - complete
+          - attention
+          - open
+        services:
+          type: object
+          properties:
+            sign:
+              type: boolean
+            notarize:
+              type: boolean
+            ship:
+              type: boolean
+            fax:
+              type: boolean
+        signers:
+          type: array
+          items:
+            type: object
+            properties:
+              email:
+                type: string
+                description: Masked email.
+              name:
+                type:
+                - string
+                - 'null'
+              routingOrder:
+                type: integer
+              signed:
+                type: boolean
+        evidenceBadge:
+          type: string
+          enum:
+          - sealed
+          - recorded
+          - none
+          description: 'Locked vocabulary: `sealed` (verifiable artifact hash on record), `recorded` (platform attestation
+            only), `none` (no evidence yet).'
+        verifyCode:
+          type:
+          - string
+          - 'null'
+          description: Present only when the badge is `sealed` and the envelope verify code exists.
+        trackingNumber:
+          type:
+          - string
+          - 'null'
+        carrier:
+          type:
+          - string
+          - 'null'
+        attachedAt:
+          type: string
+          format: date-time
+    ActivityItem:
+      type: object
+      properties:
+        orderCode:
+          type: string
+        action:
+          type: string
+          enum:
+          - order.created
+          - order.transition
+          - order.claimed
+          - order.cancelled
+          - signing_link.issued
+          - room.order_attached
+        fromStatus:
+          type:
+          - string
+          - 'null'
+        toStatus:
+          type:
+          - string
+          - 'null'
+        occurredAt:
+          type: string
+          format: date-time
+    RoomPassportInfo:
+      type:
+      - object
+      - 'null'
+      properties:
+        version:
+          type: integer
+        verifyCode:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    PassportSealResponse:
+      type: object
+      properties:
+        version:
+          type: integer
+          description: The new version number, incrementing per room.
+        verifyCode:
+          type: string
+          description: 26 lowercase base32 characters (128 bits).
+        verifyUrl:
+          type: string
+          description: '`/v/room/{verifyCode}`.'
+        manifestSha256:
+          type: string
+        prevManifestSha256:
+          type:
+          - string
+          - 'null'
+          description: The prior version's manifestSha256 — the hash-chain link. `null` on version 1.
+        sealedSha256:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    RoomPassportVerification:
+      type: object
+      properties:
+        manifest:
+          type: object
+          description: The stored canonical manifest, parsed (coverage, documents, passport).
+        manifestSha256:
+          type: string
+        sealedSha256:
+          type: string
+        version:
+          type: integer
+        prevManifestSha256:
+          type:
+          - string
+          - 'null'
+        chainOk:
+          type: boolean
+          description: 'Recomputed every call: the stored manifest re-hashes to manifestSha256 AND the chain link is intact.'
+        branding:
+          $ref: '#/components/schemas/Branding'
+        createdAt:
+          type: string
+          format: date-time
+        downloadUrl:
+          type: string
+          description: '`/api/verify/room/{verifyCode}/pdf`.'
+    ProofSealResponse:
+      type: object
+      properties:
+        passportId:
+          type: string
+          format: uuid
+        verifyCode:
+          type: string
+        verifyUrl:
+          type: string
+          description: Absolute public verification URL.
+        docSha256:
+          type: string
+          description: SHA-256 of the exact bytes you uploaded (pre-seal).
+        sealedSha256:
+          type: string
+          description: SHA-256 of the sealed PDF SignSealShip produced.
+        status:
+          type: string
+          example: sealed
+        environment:
+          type: string
+          enum:
+          - live
+          - test
+          description: Environment of the key that sealed it. The public verifier flags test-environment evidence.
+        timestamps:
+          type: object
+          description: Independent timestamp evidence; either member is `null` when the authority could not be reached.
+          properties:
+            rfc3161:
+              type:
+              - object
+              - 'null'
+              properties:
+                authority:
+                  type: string
+                timestampedAtUtc:
+                  type: string
+                  format: date-time
+            openTimestamps:
+              type:
+              - object
+              - 'null'
+              properties:
+                calendar:
+                  type: string
+                submittedAtUtc:
+                  type: string
+                  format: date-time
+                status:
+                  type: string
+                  example: pending
+    ProofPassport:
+      type: object
+      properties:
+        passportId:
+          type: string
+          format: uuid
+        verifyCode:
+          type: string
+        verifyUrl:
+          type: string
+        docSha256:
+          type: string
+        sealedSha256:
+          type: string
+        status:
+          type: string
+          example: sealed
+        environment:
+          type: string
+          enum:
+          - live
+          - test
+          description: The environment of the API key that sealed it. Sandbox-keyed passports stay visibly sandbox on every
+            surface, including public verification.
+        createdAt:
+          type: string
+          format: date-time
+    ProofVerification:
+      type: object
+      properties:
+        verdict:
+          type: string
+          enum:
+          - verified
+          - verified_test
+          example: verified
+          description: '`verified_test` marks a passport sealed with a TEST-environment key — it is not production evidence.'
+        environment:
+          type: string
+          enum:
+          - live
+          - test
+        verifyCode:
+          type: string
+        sealedSha256:
+          type: string
+        docSha256:
+          type: string
+        sealedAtUtc:
+          type: string
+          format: date-time
+        source:
+          type: string
+          example: proof_passport_api
+        certificateAvailable:
+          type: boolean
+    PassportWebhookResponse:
+      type: object
+      properties:
+        webhookId:
+          type: string
+          format: uuid
+        url:
+          type: string
+        signingSecret:
+          type: string
+          description: Shown exactly once — store it now. Only its hash is kept.
+        signatureHeader:
+          type: string
+          example: SignSealShip-Signature
+        verification:
+          type: string
+          description: How to verify the HMAC signature.
+    WebhookSubscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        topics:
+          type: array
+          items:
+            type: string
+            enum:
+            - passport.sealed
+            - room.order_attached
+            - room.passport_sealed
+            - order.created
+            - payment.cleared
+            - signature.completed
+            - shipment.delivered
+            - trust.assessment_requested
+            - trust.assessment_completed
+            - trust.assessment_superseded
+            - recording.review_required
+            - recording.quote_ready
+            - recording.approved
+            - recording.fulfillment_queued
+            - recording.mailed
+            - recording.delivered_to_recorder
+            - recording.accepted
+            - recording.recorded
+            - recording.rejected
+            - recording.receipt_sealed
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    CreateWebhookRequest:
+      type: object
+      required:
+      - url
+      - topics
+      properties:
+        url:
+          type: string
+          format: uri
+          description: An absolute https:// URL.
+        topics:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum:
+            - passport.sealed
+            - room.order_attached
+            - room.passport_sealed
+            - order.created
+            - payment.cleared
+            - signature.completed
+            - shipment.delivered
+            - trust.assessment_requested
+            - trust.assessment_completed
+            - trust.assessment_superseded
+            - recording.review_required
+            - recording.quote_ready
+            - recording.approved
+            - recording.fulfillment_queued
+            - recording.mailed
+            - recording.delivered_to_recorder
+            - recording.accepted
+            - recording.recorded
+            - recording.rejected
+            - recording.receipt_sealed
+          description: The order topics deliver only for orders created through the Order API.
+    CreateWebhookResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        secret:
+          type: string
+          description: Signing secret prefixed `sss_whsec_`. Shown exactly once.
+        url:
+          type: string
+        topics:
+          type: array
+          items:
+            type: string
+        signatureHeader:
+          type: string
+          example: SignSealShip-Signature
+    RotateWebhookResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The rotated subscription id.
+        secret:
+          type: string
+          description: The new signing secret, prefixed `sss_whsec_`. Shown exactly once — only its hash is stored. Deliveries
+            are signed with both the old and the new secret for 24 hours, then the old secret stops signing.
+        signatureHeader:
+          type: string
+          description: Header name carrying the HMAC signature on every delivery.
+        previousSecretExpiresAt:
+          type: string
+          format: date-time
+          description: Until this instant deliveries are signed with BOTH secrets — accept either during the overlap.
+    AddParticipantRequest:
+      type: object
+      required:
+      - name
+      - email
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          description: The person's display name, as you'd write it on the file.
+        email:
+          type: string
+          format: email
+          maxLength: 320
+          description: Where you would reach them. Stored lowercased; per-room uniqueness is case-insensitive.
+        role:
+          type: string
+          maxLength: 40
+          default: client
+          description: Their part in the deal — client, signer, agent, lender, attorney, title_officer, observer, or anything
+            else you use. Descriptive only; it grants no authorization.
+    RoomParticipant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+          description: The real address. The PUBLIC room view masks this; only the owning partner reads it unmasked here.
+        role:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+    CallJoinResponse:
+      oneOf:
+      - type: object
+        title: Call is live
+        properties:
+          live:
+            type: boolean
+            enum:
+            - true
+          url:
+            type: string
+            description: LiveKit websocket URL.
+          token:
+            type: string
+            description: Short-lived LiveKit access token for this party.
+          room:
+            type: string
+            description: LiveKit room name, derived server-side from the closing.
+          displayName:
+            type: string
+            description: What the other participants see.
+          roomName:
+            type: string
+            description: The closing's name.
+          startedAt:
+            type: string
+            format: date-time
+      - type: object
+        title: Call has not started
+        properties:
+          live:
+            type: boolean
+            enum:
+            - false
+          roomName:
+            type: string
+          message:
+            type: string

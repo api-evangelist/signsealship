@@ -1,0 +1,144 @@
+{
+  "aid": "signsealship.com:partner-api",
+  "name": "SignSealShip Partner API",
+  "type": "Index",
+  "description": "E-signature, remote online notarization coordination, document verification and physical delivery in one workflow. The API covers onboarding, orders, closing rooms, closing passports, proof passports, webhooks and a sandbox. Also indexes a free CC BY 4.0 dataset of remote online notarization requirements for all 51 U.S. jurisdictions.",
+  "image": "https://signsealship.com/brand/icon-512.png",
+  "url": "https://signsealship.com/.well-known/apis.json",
+  "created": "2026-08-31",
+  "modified": "2026-08-31",
+  "specificationVersion": "0.15",
+  "tags": [
+    "notarization",
+    "remote online notarization",
+    "electronic signature",
+    "document verification",
+    "legal technology",
+    "real estate",
+    "title and escrow",
+    "shipping"
+  ],
+  "apis": [
+    {
+      "aid": "signsealship.com:partner-api",
+      "name": "SignSealShip Partner API",
+      "description": "Create and track orders that combine e-signature, remote online notarization and tracked delivery. 35 documented paths across Onboarding, Orders, Sandbox, Closing Rooms, Closing Passports, Proof Passport, Webhooks, and Launchpad & Analytics. OpenAPI 3.1.0.",
+      "image": "https://signsealship.com/brand/icon-512.png",
+      "humanURL": "https://docs.signsealship.com",
+      "baseURL": "https://signsealship.com",
+      "tags": [
+        "notarization",
+        "electronic signature",
+        "document verification",
+        "shipping"
+      ],
+      "properties": [
+        {
+          "type": "Documentation",
+          "url": "https://docs.signsealship.com"
+        },
+        {
+          "type": "OpenAPI",
+          "url": "https://docs.signsealship.com/api-reference/openapi.json"
+        },
+        {
+          "type": "API Onboarding",
+          "url": "https://signsealship.com/.well-known/api-onboarding.json"
+        },
+        {
+          "type": "Authentication",
+          "url": "https://docs.signsealship.com/api-reference/authentication"
+        },
+        {
+          "type": "Webhooks",
+          "url": "https://signsealship.com/partner/webhooks"
+        },
+        {
+          "type": "Sandbox",
+          "url": "https://signsealship.com/partner/launchpad"
+        },
+        {
+          "type": "SignupURL",
+          "url": "https://signsealship.com/partner"
+        },
+        {
+          "type": "StatusPage",
+          "url": "https://signsealship.com/status"
+        },
+        {
+          "type": "TermsOfService",
+          "url": "https://signsealship.com/legal/terms"
+        },
+        {
+          "type": "PrivacyPolicy",
+          "url": "https://signsealship.com/legal/privacy"
+        },
+        {
+          "type": "SecurityPolicy",
+          "url": "https://signsealship.com/security"
+        },
+        {
+          "type": "Pricing",
+          "url": "https://signsealship.com/pricing"
+        }
+      ],
+      "contact": [
+        {
+          "FN": "SignSealShip",
+          "url": "https://signsealship.com/contact"
+        }
+      ]
+    },
+    {
+      "aid": "signsealship.com:ron-laws-dataset",
+      "name": "Remote online notarization requirements by U.S. jurisdiction",
+      "description": "Statute-cited remote online notarization requirements for all 50 U.S. states and the District of Columbia: effective date, notary fee cap, identity-verification standard, record-retention period, signer-location rule and document exclusions. Every value carries its own primary-source citation. Published under CC BY 4.0 and archived at Zenodo (DOI 10.5281/zenodo.22213684). Values are reported as the cited sources state them and are not legal advice.",
+      "humanURL": "https://signsealship.com/ron-laws",
+      "baseURL": "https://signsealship.com",
+      "tags": [
+        "open data",
+        "remote online notarization",
+        "state law",
+        "legal reference"
+      ],
+      "properties": [
+        {
+          "type": "DOI",
+          "url": "https://doi.org/10.5281/zenodo.22213684"
+        },
+        {
+          "type": "JSON",
+          "url": "https://signsealship.com/ron-laws.json"
+        },
+        {
+          "type": "CSV",
+          "url": "https://signsealship.com/ron-laws.csv"
+        },
+        {
+          "type": "Documentation",
+          "url": "https://signsealship.com/ron-laws"
+        },
+        {
+          "type": "License",
+          "url": "https://creativecommons.org/licenses/by/4.0/"
+        },
+        {
+          "type": "Changelog",
+          "url": "https://signsealship.com/ron-laws#corrections"
+        },
+        {
+          "type": "Repository",
+          "url": "https://zenodo.org/records/22213685"
+        }
+      ]
+    }
+  ],
+  "maintainers": [
+    {
+      "FN": "SignSealShip",
+      "url": "https://signsealship.com",
+      "X-twitter": "",
+      "email": ""
+    }
+  ]
+}

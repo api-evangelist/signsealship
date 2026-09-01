@@ -1,0 +1,258 @@
+generated: '2026-09-01'
+method: searched
+source: >-
+  https://docs.signsealship.com/api-reference/authentication,
+  https://docs.signsealship.com/api-reference/webhooks,
+  https://docs.signsealship.com/api-reference/orders,
+  openapi/signsealship-partner-api-openapi.yml
+auth:
+  style: bearer
+  header: 'Authorization: Bearer sss_pk_...'
+  key_prefix: sss_pk_
+  key_entropy: 256 bits, lowercase base32 after the prefix
+  storage: SignSealShip stores only the SHA-256 hash of a key; a lost key cannot be recovered.
+  alternate: >-
+    A dashboard session cookie (__Host-session) is accepted on the /api/partner/webhooks
+    management routes as an alternative to the partner key.
+  anonymous_surface: >-
+    Eight read operations need no credential -- public room view, Closing Passport verify and
+    PDF, Proof Passport verify and document. Possession of the code IS the authorization, which
+    makes room links and verify codes bearer credentials in their own right.
+  see: authentication/signsealship-authentication.yml
+idempotency:
+  supported: true
+  mechanism: header
+  header: Idempotency-Key
+  declared_in: '#/components/parameters/IdempotencyKey'
+  required: false
+  key_format: 8-255 characters, opaque
+  scope: one key to one logical action
+  semantics: >-
+    A retry carrying the same key replays the original response instead of acting twice.
+  operations:
+  - POST /api/partner/orders
+  - POST /api/partner/orders/{code}/checkout
+  retention: not published
+  retention_gap: >-
+    The spec and docs never state how long a key is remembered, so a client cannot know when a
+    replayed key stops being safe to reuse. This is the one gap in an otherwise well-formed
+    idempotency contract.
+  natural_idempotency:
+  - operation: POST /api/rooms/{roomCode}/orders
+    behavior: Re-attaching an already-attached order succeeds with alreadyAttached true.
+  - operation: POST /api/rooms/{roomCode}/participants
+    behavior: >-
+      Re-adding a live email address (case-insensitive) succeeds with alreadyPresent true.
+  - surface: webhook deliveries
+    behavior: >-
+      Order-event delivery ids are deterministic -- {topic}:{orderCode} -- so a redelivery
+      deduplicates cleanly on the consumer side.
+pagination:
+  style: limit-only
+  params:
+  - name: limit
+    in: query
+  - name: order
+    in: query
+  - name: status
+    in: query
+  - name: days
+    in: query
+    applies_to: GET /api/partner/analytics (1-366 day window)
+  - name: external_reference
+    in: query
+    applies_to: GET /api/partner/orders
+  - name: topic
+    in: query
+    applies_to: GET /api/partner/webhooks/deliveries
+  cursor: none
+  page_tokens: none
+  response_envelope: bare JSON array
+  default_order: newest first
+  gap: >-
+    Collections return a bare newest-first array with a limit and no cursor, offset or total.
+    A client cannot page past the limit, and cannot tell a truncated result from a complete one.
+field_expansion:
+  supported: false
+sparse_fieldsets:
+  supported: false
+metadata:
+  supported: partial
+  mechanism: >-
+    external_reference on order creation, echoed back on order responses and on every order
+    webhook event, and filterable via GET /api/partner/orders?external_reference=. It is a single
+    correlation string, not an arbitrary key/value metadata bag.
+request_id_tracing:
+  supported: true
+  mechanism: response body member
+  field: requestId
+  documented_as: "This request's id -- quote it in support tickets."
+  operations: 10
+  found_on:
+  - POST /api/partner/orders (CreateOrderResponse)
+  - GET /api/partner/orders
+  - GET /api/partner/orders/{code} (OrderDetail)
+  - POST /api/partner/orders/{code}/checkout
+  - GET /api/partner/launchpad
+  - GET /api/partner/analytics
+  - POST /api/partner/sandbox/orders/{code}/checkout
+  - POST /api/partner/sandbox/orders/{code}/advance
+  - POST /api/partner/webhooks/{id}/test
+  - POST /api/partner/webhooks/deliveries/{deliveryId}/replay
+  gap: >-
+    requestId is returned in the RESPONSE BODY, never as a response header, and only on the
+    partner Order, Launchpad, Analytics, Sandbox and webhook-action operations. The Closing Room,
+    Closing Passport and Proof Passport surfaces return no correlation id at all, and there is no
+    inbound correlation header a caller can set. A client that gets a 4xx or 5xx -- exactly when
+    it most needs an id to quote -- gets the bare Error envelope with no requestId in it.
+authorization_model:
+  style: coarse permission strings, NOT machine-declared
+  strings:
+  - orders:read
+  - orders:write
+  - webhooks:read
+  - webhooks:write
+  declared_in: >-
+    Operation DESCRIPTIONS only ("Requires `orders:write`"). components.securitySchemes declares
+    a plain http/bearer scheme and a cookie apiKey scheme -- no oauth2 flow, and therefore no
+    scopes{} map an SDK or agent can read.
+  contradiction: >-
+    The provider's own /.well-known/api-onboarding.json states "There is no scope-string model.
+    Access is gated by plan tier." The OpenAPI contradicts it by naming four permission strings
+    across nine operations. One of the two documents is wrong; the contract is the one a machine
+    reads.
+  effect: >-
+    A caller cannot discover which permissions its key holds, cannot request a narrower key, and
+    learns a permission is missing only from a 401/403 at call time.
+versioning:
+  scheme: single unversioned surface
+  detail: >-
+    info.version is 1.0.0 and paths carry no version segment (/api/..., never /api/v1/...).
+    Change is communicated through a dated changelog, not through a version selector or a
+    version header.
+  build_identity: >-
+    GET https://signsealship.com/api/version returns the running service, semantic version, git
+    commit, tree status and build timestamp -- an unusually strong deployment-provenance signal
+    for a company this size.
+  see: lifecycle/signsealship-lifecycle.yml
+error_envelope:
+  media_type: application/json
+  shape: '{ "error": "<human sentence>" }'
+  rfc9457: false
+  see: errors/signsealship-problem-types.yml
+rate_limit_signaling:
+  status: 429
+  headers: none documented
+  see: rate-limits/signsealship-rate-limits.yml
+webhook_conventions:
+  signature_header: SignSealShip-Signature
+  signature_format: 't=<unix seconds>,v1=<hex hmac>'
+  event_header: SignSealShip-Event
+  algorithm: HMAC (v1 scheme, signed payload includes the timestamp)
+  secret_display: shown exactly once at creation; only the hash is stored
+  rotation_overlap: >-
+    24 hours of dual signing after POST /api/partner/webhooks/{id}/rotate -- the header carries a
+    v1 entry per active secret and a consumer should accept a delivery when ANY v1 entry matches.
+  delivery_ledger: >-
+    GET /api/partner/webhooks/{id}/deliveries and the cross-subscription feeds return
+    metadata-only delivery attempts; event payload bodies are never stored or returned.
+  replay: POST /api/partner/webhooks/deliveries/{deliveryId}/replay
+  transport: HTTPS only -- a non-https URL is rejected with 400.
+  see: asyncapi/signsealship-webhooks.yml
+caching:
+  note: >-
+    The public room view is served Cache-Control no-store. The status page is explicitly
+    uncached and runs live checks at request time.
+reversibility:
+  grade: verified
+  applicable: true
+  note: >-
+    A write API whose central product is a permanent evidence record. Some writes are reversible
+    with a stated window, some are reversible without one, and the sealing operations are
+    deliberately irreversible by design -- which is itself the safety property being sold. An
+    agent must know which is which BEFORE it acts.
+  reversible:
+  - action: Rotate a webhook signing secret
+    operation: POST /api/partner/webhooks/{id}/rotate
+    reversal: >-
+      Not undoable, but a stated grace window makes the change safe: the old secret keeps signing
+      alongside the new one.
+    window: 24 hours of dual signing after rotation
+    window_source: https://docs.signsealship.com/api-reference/webhooks
+    grade: verified
+  - action: Rotate a Closing Room link
+    operation: POST /api/rooms/{roomCode}/rotate
+    reversal: >-
+      NONE. Reissuing the room's bearer code kills every previously shared link instantly. This
+      is the mitigation for a leaked link, and it is one-way -- the old code cannot be restored.
+    window: none, effective immediately
+    window_source: https://docs.signsealship.com/api-reference/rooms
+    grade: irreversible-by-design
+  - action: Attach an order to a room
+    operation: POST /api/rooms/{roomCode}/orders
+    reversal: DELETE /api/rooms/{roomCode}/orders/{orderCode}
+    window: not stated
+    grade: documented
+  - action: Add a participant to a room
+    operation: POST /api/rooms/{roomCode}/participants
+    reversal: DELETE /api/rooms/{roomCode}/participants/{participantId}
+    window: not stated
+    caveat: >-
+      Removing a participant does NOT revoke a room link they already hold -- rotate the room
+      code for that. Documented explicitly in the operation description.
+    grade: documented
+  - action: Create a webhook subscription
+    operation: POST /api/partner/webhooks
+    reversal: DELETE /api/partner/webhooks/{id}
+    window: not stated
+    grade: documented
+  - action: Register a passport webhook
+    operation: POST /api/passport/webhooks
+    reversal: DELETE /api/passport/webhooks/{id}
+    window: not stated
+    grade: documented
+  irreversible:
+  - action: Seal a Closing Passport version
+    operation: POST /api/rooms/{roomCode}/passport
+    detail: >-
+      Mints the next version -- dated, hash-chained and KMS-sealed. Never an overwrite, and there
+      is no unseal or delete. Capped at 20 versions per room, so the 20 attempts themselves are a
+      finite, non-renewable budget an agent can exhaust.
+  - action: Seal a document as a Proof Passport
+    operation: POST /api/passport/seal
+    detail: >-
+      Returns a permanently verifiable sealed PDF with a public verification URL. No revoke, no
+      delete, no unseal operation exists.
+  - action: Mint a checkout session
+    operation: POST /api/partner/orders/{code}/checkout
+    detail: >-
+      Minting itself is safe and state-neutral -- it never advances the order. But once the payer
+      completes checkout, the verified Stripe webhook advances state and the money has moved.
+      There is no refund, void or cancel operation in the API.
+  refunds:
+    api_operation: none
+    detail: >-
+      The API exposes no refund, void, cancel-order or reverse operation. A refund is a
+      human/commercial process governed by https://signsealship.com/legal/refunds (HTTP 200,
+      probed 2026-09-01), not a callable endpoint. An agent that creates and pays for an order
+      cannot undo it programmatically.
+  retention_and_deletion:
+    detail: >-
+      Sealed documents are retained in a dedicated 7-year retention bucket. Uploaded bytes for
+      POST /api/passport/seal are streamed in memory, never written to disk, and discarded after
+      sealing. No delete-my-record endpoint is published.
+dry_run_mode:
+  supported: true
+  mechanism: >-
+    Environment is a property of the KEY, not a request flag. A test-environment key produces
+    passports whose environment is "test" and whose public verification verdict is
+    "verified_test" on every surface, so sandbox evidence can never be mistaken for production
+    evidence. The order lifecycle additionally has explicit sandbox simulation endpoints.
+  see: sandbox/signsealship-sandbox.yml
+cross_links:
+  errors: errors/signsealship-problem-types.yml
+  lifecycle: lifecycle/signsealship-lifecycle.yml
+  authentication: authentication/signsealship-authentication.yml
+  rate_limits: rate-limits/signsealship-rate-limits.yml
+  sandbox: sandbox/signsealship-sandbox.yml
+  webhooks: asyncapi/signsealship-webhooks.yml

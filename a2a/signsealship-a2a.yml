@@ -1,0 +1,58 @@
+generated: '2026-09-01'
+method: probed
+source: https://docs.signsealship.com/.well-known/agent-card.json
+discovery:
+  path: /.well-known/agent-card.json
+  canonical: true
+  host: docs.signsealship.com
+x-evidence:
+  fetched: '2026-09-01'
+  url: https://docs.signsealship.com/.well-known/agent-card.json
+  http_status: 200
+  content_type: application/json
+card:
+  file: signsealship-agent-card.json
+  name: SignSealShip Docs
+  url: https://docs.signsealship.com/
+  version: 1.0.0
+  protocol_version: '0.3'
+  preferred_transport: HTTP+JSON
+  provider_organization: SignSealShip Docs
+  documentation_url: https://docs.signsealship.com/
+  skill_count: 1
+  skills:
+  - id: sign
+    name: Sign
+    url: https://docs.signsealship.com/.well-known/agent-skills/sign/skill.md
+    fetched: true
+    file: ../skills/signsealship-sign-skill.md
+grade: conformant
+grade_basis: >-
+  A2A 1.0.0 hard checks all pass: capabilities is a JSON object, protocolVersion is present,
+  and skills is an array. Optional preferredTransport, defaultInputModes and defaultOutputModes
+  are all present as well.
+deviations:
+- field: description
+  issue: >-
+    The card carries no top-level description. A2A treats description as a required member of
+    AgentCard; the human-readable purpose has to be read out of the single skill instead.
+- field: protocolVersion
+  issue: >-
+    Declares "0.3" rather than a 1.x protocol version, so it is a pre-1.0 card served at the
+    post-0.3 canonical path.
+- field: supportedInterfaces
+  issue: >-
+    Uses supportedInterfaces[]. A2A 0.3 names this member additionalInterfaces[]; the shape of
+    each entry (url + protocolBinding + protocolVersion) is otherwise conventional.
+- field: skills[].tags
+  issue: skills[0].tags is an empty array, so the skill carries no discovery keywords.
+- field: scope
+  issue: >-
+    The card describes the DOCUMENTATION site, not the Partner API. It is a Mintlify-generated
+    docs agent card -- an agent that reads it learns how to read the docs, not how to create an
+    order. It is genuinely served by a SignSealShip-controlled host, so it counts, but it is not
+    an agent interface onto the product.
+ownership_check: >-
+  Served from docs.signsealship.com, the documentation host named as humanURL in the provider's
+  own /.well-known/apis.json. provider.organization and every url in the card resolve to
+  docs.signsealship.com. Host is controlled by SignSealShip.

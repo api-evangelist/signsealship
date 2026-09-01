@@ -1,0 +1,206 @@
+generated: '2026-09-01'
+method: derived
+source: >-
+  openapi/signsealship-partner-api-openapi.yml (31 component schemas, $ref graph and
+  id-reference fields), enriched from https://docs.signsealship.com/evidence-model and
+  https://docs.signsealship.com/closing-passport
+note: >-
+  Relationships are derived two ways: from explicit $ref links between schemas, and from
+  code-reference fields (roomCode, orderCode, verifyCode, passportId) that carry a foreign key by
+  value rather than by $ref. The second kind dominates -- this API relates records through
+  opaque public codes, which are simultaneously identifiers AND bearer credentials.
+identifier_model:
+  note: >-
+    THE CENTRAL DESIGN FACT: in this API an identifier IS an authorization. Possession of a room
+    code, an order code or a verify code is the credential for the public endpoints that read it.
+    That is why they are high-entropy, why rotation exists, and why an unknown code and another
+    partner's code return the identical 404.
+  identifiers:
+  - name: orderCode
+    entity: Order
+    shape: public code returned by the create response
+    is_credential: true
+    note: Authorizes attaching the order to a room.
+  - name: roomCode
+    entity: ClosingRoom
+    shape: 40 lowercase hex characters; the public read endpoint accepts 24-64
+    is_credential: true
+    rotatable: true
+    rotation_operation: POST /api/rooms/{roomCode}/rotate
+  - name: verifyCode
+    entity: ClosingPassport / ProofPassport
+    shape: 26 lowercase base32 characters (128 bits)
+    is_credential: true
+    note: Bearer for public verification and for the sealed PDF download.
+  - name: passportId
+    entity: ProofPassport
+    shape: uuid
+    is_credential: false
+    note: Partner-scoped; the private handle, as opposed to the public verifyCode.
+  - name: id
+    entity: WebhookSubscription
+    is_credential: false
+  - name: deliveryId
+    entity: WebhookDelivery
+    is_credential: false
+  - name: external_reference
+    entity: Order
+    shape: partner-supplied correlation string
+    is_credential: false
+    note: >-
+      The only consumer-controlled key in the model. Echoed on order responses and on every order
+      webhook event, and filterable on GET /api/partner/orders.
+entities:
+- name: Partner
+  schemas: [PartnerRequest, PartnerRequestResponse]
+  description: >-
+    The account that holds the API key. Not directly readable -- GET /api/partner/me answers
+    "who am I" but no Partner resource is exposed.
+  relationships:
+  - has_many: Order
+    via: implicit partner scoping (another partner's order is a 404)
+  - has_many: ClosingRoom
+    via: implicit partner scoping
+  - has_many: WebhookSubscription
+    via: implicit partner scoping
+- name: Order
+  schemas: [CreateOrderRequest, CreateOrderResponse, OrderSummary, OrderDetail]
+  description: >-
+    One document moving through sign, notarize and ship. Priced entirely server-side from the B2B
+    price book with the partner's tier discount applied.
+  key: orderCode
+  state_field: status
+  state_grouping: statusGroup
+  status_groups: [signing, signed, notarizing, notarized, shipping, shipped, delivered]
+  status_note: >-
+    `status` is the raw platform status (example given: EsignPending) and the spec explicitly
+    instructs consumers to "Build logic on statusGroup" instead -- an unusual and welcome piece of
+    forward-compatibility guidance written into the contract.
+  relationships:
+  - has_many: OrderLine
+    via: lines[] ($ref)
+  - has_one: OrderServices
+    via: services
+    note: >-
+      On order RESPONSES `services` is a comma-separated flags string, not the OrderServices
+      object -- corrected in the 2026-08-01 release. OrderServices itself declares no properties.
+  - belongs_to: Partner
+    via: implicit scoping
+  - has_many: ClosingRoom
+    via: orderCode, many-to-many through attachment (a room holds at most 50 orders)
+- name: OrderLine
+  schemas: [OrderLine]
+  description: >-
+    One itemized receipt line. Types observed in the docs are PascalCase and include
+    ShippingCarrierRate, ShippingHandlingFee and Discount (negative amount).
+  fields: [type, label, amountCents]
+  money_unit: cents (integer)
+  relationships:
+  - belongs_to: Order
+    via: lines[]
+- name: ClosingRoom
+  schemas: [CreateRoomRequest, CreateRoomResponse, RoomSummary, RoomView, Branding, RoomOrderCard, ActivityItem, RoomPassportInfo]
+  description: One shareable, live-status page per closing, bundling multiple orders.
+  key: roomCode
+  relationships:
+  - has_many: RoomOrderCard
+    via: orders[] ($ref) -- the attached-order projection, max 50
+  - has_many: ActivityItem
+    via: activity[] ($ref)
+  - has_many: RoomParticipant
+    via: participants, max 25
+  - has_one: Branding
+    via: branding ($ref)
+  - has_one: RoomPassportInfo
+    via: passport ($ref) -- the latest sealed version, if any
+  - has_many: ClosingPassport
+    via: version, max 20 versions per room
+- name: RoomParticipant
+  schemas: [AddParticipantRequest, RoomParticipant]
+  fields: [id, name, email, role, addedAt]
+  relationships:
+  - belongs_to: ClosingRoom
+    via: roomCode path parameter
+  note: >-
+    Removing a participant does NOT revoke a room link they already hold; the room code must be
+    rotated for that. The participant list is a roster, not an access-control list.
+- name: ClosingPassport
+  schemas: [PassportSealResponse, RoomPassportVerification, RoomPassportInfo]
+  description: >-
+    A versioned, hash-chained, KMS-sealed evidence manifest for a room. Append-only: sealing mints
+    the next version and never overwrites.
+  key: verifyCode
+  chain:
+    link_field: prevManifestSha256
+    self_hash: manifestSha256
+    genesis: prevManifestSha256 is null on version 1
+    verification_field: chainOk
+    verification_semantics: recomputed on every call, never a stored verdict
+  relationships:
+  - belongs_to: ClosingRoom
+    via: roomCode
+  - has_one: ClosingPassport
+    via: prevManifestSha256 (previous version -- a self-referential chain)
+- name: ProofPassport
+  schemas: [ProofSealResponse, ProofPassport, ProofVerification]
+  description: >-
+    A standalone executed PDF sealed with Google Cloud KMS, independent of any room.
+  key: passportId (private) / verifyCode (public)
+  hashes: [docSha256 (pre-seal upload), sealedSha256 (sealed PDF)]
+  environment_field: environment
+  environment_values: [live, test]
+  relationships:
+  - has_one: TimestampEvidence
+    via: timestamps (inline object)
+  - belongs_to: Partner
+    via: implicit scoping -- a passport is visible only to the partner that created it
+- name: TimestampEvidence
+  schemas: ['ProofSealResponse.timestamps (inline)']
+  description: >-
+    Two mutually independent timestamp authorities on the same seal. Either member is null when
+    that authority could not be reached, which is modeled explicitly rather than hidden.
+  members:
+  - name: rfc3161
+    fields: [authority, timestampedAtUtc]
+  - name: openTimestamps
+    fields: [calendar, submittedAtUtc, status]
+- name: WebhookSubscription
+  schemas: [CreateWebhookRequest, CreateWebhookResponse, WebhookSubscription, RotateWebhookResponse, PassportWebhookResponse]
+  key: id
+  fields: [id, url, topics, active, createdAt]
+  secret_model: >-
+    `secret` appears only on CreateWebhookResponse and RotateWebhookResponse -- shown exactly
+    once, stored only as a hash. RotateWebhookResponse additionally carries
+    previousSecretExpiresAt, which is the machine-readable form of the 24-hour dual-signature
+    window.
+  relationships:
+  - belongs_to: Partner
+  - has_many: WebhookDelivery
+    via: id
+- name: WebhookDelivery
+  schemas: ['inline response objects on the deliveries operations']
+  key: deliveryId
+  description: >-
+    Metadata-only attempt record -- what was attempted, when, and how the endpoint answered.
+    Event payload bodies are never stored or returned.
+  relationships:
+  - belongs_to: WebhookSubscription
+  - has_one: WebhookDelivery
+    via: replayedFrom (a replay points at the delivery it re-sent)
+schema_count: 31
+observations:
+- >-
+  Money is expressed in integer cents throughout (subtotalCents, discountCents, totalCents,
+  amountCents) with no currency member on any schema -- USD is implicit. A consumer cannot read
+  the currency out of a response.
+- >-
+  Two schemas declare no properties at all: OrderServices and CallJoinResponse. They are
+  referenced but empty, so a generator produces a bare object for each and a consumer learns
+  nothing about the join-call response shape or the services object.
+- >-
+  There is no Partner resource schema. The account exists as a scope on every read but is never
+  itself a readable entity.
+- >-
+  Timestamps are consistently ISO 8601 date-time and consistently UTC-named (…AtUtc on the
+  evidence surfaces, plain createdAt/updatedAt elsewhere) -- a minor naming inconsistency across
+  two families of schemas.

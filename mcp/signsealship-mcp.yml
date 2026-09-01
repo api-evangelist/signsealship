@@ -1,0 +1,80 @@
+generated: '2026-09-01'
+method: probed
+status: published
+source: https://docs.signsealship.com/.well-known/mcp.json
+probe:
+  url: https://sign-seal-ship.main-kill-isr.mintlify.me/mcp
+  method: POST tools/list (jsonrpc 2.0)
+  http_status: 200
+  transport_observed: text/event-stream (SSE framed JSON-RPC)
+  fetched: '2026-09-01'
+deployment:
+  mode: remote
+  endpoint: https://sign-seal-ship.main-kill-isr.mintlify.me/mcp
+  auth: none
+  verified: probed
+server:
+  name: sign-seal-ship
+  transport: http
+  url: https://sign-seal-ship.main-kill-isr.mintlify.me/mcp
+  declared_in: https://docs.signsealship.com/.well-known/mcp.json
+  host_class: vendor-hosted
+scope: documentation-search
+scope_note: >-
+  This is the Mintlify documentation-search MCP server that ships with the provider's Mintlify
+  docs site, not an MCP interface onto the SignSealShip Partner API. Its two tools search and
+  read the docs corpus; none of them create an order, seal a passport, or call any of the 39
+  Partner API operations. An agent connected to this server can LEARN the API but cannot USE it.
+host_note: >-
+  The endpoint resolves to a *.mintlify.me preview hostname rather than a signsealship.com host.
+  It is nevertheless the provider's own declared server: docs.signsealship.com -- the
+  documentation host named in the provider's /.well-known/apis.json -- publishes
+  /.well-known/mcp.json naming exactly this URL, and the server identifies itself as
+  "SignSealShip Docs". A preview-subdomain endpoint is a fragile public address: it is not under
+  the provider's DNS control and can change when the docs project is renamed or redeployed.
+auth:
+  methods:
+  - none
+  note: >-
+    /.well-known/mcp.json declares authentication "none", and the anonymous tools/list call
+    returned 200 with the full tool list, confirming it.
+tool_count: 2
+tools:
+- name: search_sign_seal_ship_docs
+  category: documentation
+  description: >-
+    Search the SignSealShip Docs knowledge base for documentation, code examples, API references
+    and guides. Returns contextual content with titles and direct links to doc pages.
+  input_schema:
+    type: object
+    properties:
+      query:
+        type: string
+        description: Search query
+    required:
+    - query
+  annotations:
+    readOnlyHint: true
+    destructiveHint: false
+    idempotentHint: true
+    openWorldHint: false
+- name: query_docs_filesystem_sign_seal_ship_docs
+  category: documentation
+  description: >-
+    Read-only shell-like query (rg, grep, find, tree, ls, cat, head, tail, jq and friends)
+    against a virtualized in-memory filesystem containing only the SignSealShip docs pages and
+    OpenAPI specs. Stateless per call. Used to read a page by .mdx path.
+  annotations:
+    readOnlyHint: true
+oauth_discovery:
+  - url: https://sign-seal-ship.main-kill-isr.mintlify.me/.well-known/oauth-authorization-server
+    status: not-probed
+    note: The server declares auth none and answered anonymously, so no OAuth metadata applies.
+gaps:
+- >-
+  No MCP server exposes the Partner API itself. The 39 operations in
+  openapi/signsealship-partner-api-openapi.yml have no tool binding -- see
+  mcp/signsealship-tool-crosswalk.yml, where rest_only[] holds all of them.
+- >-
+  The endpoint is a Mintlify preview hostname, not a first-party host such as
+  mcp.signsealship.com. Nothing about the address is under the provider's control.

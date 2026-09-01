@@ -1,0 +1,212 @@
+generated: '2026-09-01'
+method: derived
+source: >-
+  openapi/signsealship-partner-api-openapi.yml, https://signsealship.com/security,
+  https://docs.signsealship.com/evidence-model, https://docs.signsealship.com/api-reference/authentication
+note: >-
+  Cross-cutting and domain standards asserted against the CONTRACT first and the provider's own
+  prose second. Every `conforms: true` row below points at a specific location in the spec or a
+  URL that was fetched on 2026-09-01. Rows that are false are recorded as false rather than
+  omitted -- an honest negative is the useful half of this file.
+conformance:
+- id: oauth2
+  conforms: false
+  evidence: >-
+    components.securitySchemes declares only partnerKey (http/bearer) and sessionCookie
+    (apiKey/cookie). No oauth2 flow, no authorization server, and
+    /.well-known/oauth-authorization-server returns 404 on both hosts.
+- id: oidc
+  conforms: false
+  evidence: /.well-known/openid-configuration returned 404 on signsealship.com and docs.signsealship.com.
+- id: rfc9457
+  conforms: false
+  evidence: >-
+    All 79 documented 4xx/5xx responses use media type application/json with
+    components.schemas.Error -- a one-member { "error": string } object. No
+    application/problem+json, no type URI, no title/status/instance members.
+- id: idempotency
+  conforms: true
+  evidence: >-
+    components.parameters.IdempotencyKey declares an optional `Idempotency-Key` request header
+    (8-255 chars) on POST /api/partner/orders and POST /api/partner/orders/{code}/checkout, with
+    replay-the-original-response semantics stated in the parameter description. Two further
+    operations (attach order, add participant) are naturally idempotent and say so. Retention
+    period is not published.
+- id: pagination
+  conforms: false
+  evidence: >-
+    Collections accept `limit` and `order` and return a bare newest-first JSON array. No cursor,
+    no offset, no total, no Link header, no next-page token -- a caller cannot page past the
+    limit or distinguish a truncated list from a complete one.
+- id: rfc8594
+  conforms: false
+  evidence: No Sunset or Deprecation response headers are declared or documented; no operation carries deprecated:true.
+- id: rfc9331-ratelimit-headers
+  conforms: false
+  evidence: >-
+    Five named rate-limit policies are published in prose at
+    https://docs.signsealship.com/api-reference/authentication, but no RateLimit-*,
+    X-RateLimit-* or Retry-After response header is declared anywhere.
+- id: json:api
+  conforms: false
+  evidence: Plain application/json resource shapes; no JSON:API document structure, media type or links member.
+- id: scim
+  conforms: false
+  evidence: No user/group provisioning surface exists.
+- id: odata
+  conforms: false
+  evidence: No $metadata endpoint and no OData query options.
+- id: fhir
+  conforms: false
+  evidence: Not a healthcare data API.
+- id: psd2
+  conforms: false
+  evidence: Not a payment-account API. Payment is delegated to Stripe hosted checkout.
+- id: openapi-3.1
+  conforms: true
+  evidence: >-
+    openapi "3.1.0", 35 paths / 39 operations, 31 component schemas, reusable parameters and
+    responses. Published at two first-party locations
+    (https://docs.signsealship.com/api-reference/openapi.json and
+    https://signsealship.com/openapi.json, byte-identical on 2026-09-01).
+  deviations:
+  - >-
+    ZERO operations declare an operationId. Every generator -- SDK, MCP tool, test harness,
+    crosswalk -- has to invent identifiers, and no two will agree. This is the single most
+    consequential defect in an otherwise well-built spec.
+  - Four permission strings appear in operation descriptions but in no securityScheme.
+  - No top-level webhooks: block, though seven event topics are documented in prose.
+- id: apis.json
+  conforms: true
+  evidence: >-
+    https://signsealship.com/.well-known/apis.json returns 200 with a specificationVersion 0.15
+    index naming both the Partner API and the RON-laws dataset.
+- id: api-onboarding-descriptor
+  conforms: true
+  evidence: >-
+    https://signsealship.com/.well-known/api-onboarding.json returns 200 with aod 0.1 --
+    maturity, account prerequisites, plan gates, verification steps, registration mechanisms,
+    credential shape, economics, and a self-declared gaps[] list.
+- id: a2a
+  conforms: true
+  grade: conformant
+  evidence: >-
+    https://docs.signsealship.com/.well-known/agent-card.json returns 200 with a valid AgentCard
+    object -- capabilities is an object, protocolVersion is present ("0.3"), skills is an array.
+    Graded in full in a2a/signsealship-a2a.yml. Scope is the documentation site, not the API.
+- id: mcp
+  conforms: true
+  evidence: >-
+    https://sign-seal-ship.main-kill-isr.mintlify.me/mcp answered an anonymous JSON-RPC
+    tools/list with 200 and two tools carrying inputSchema. Declared at
+    https://docs.signsealship.com/.well-known/mcp.json. Documentation search only -- no Partner
+    API tools.
+- id: llms.txt
+  conforms: true
+  evidence: >-
+    Two distinct llms.txt files, both 200: https://signsealship.com/llms.txt (product, pricing,
+    jurisdictional coverage) and https://docs.signsealship.com/llms.txt (a 44-entry index of .md
+    twins of every docs page plus the OpenAPI). The site footer explicitly addresses AI agents
+    and links to it.
+- id: hsts
+  conforms: true
+  evidence: >-
+    TLSv1.3 with HSTS max-age 63072000 on both signsealship.com and docs.signsealship.com
+    (probed 2026-09-01). See security/signsealship-domain-security.yml.
+- id: dmarc
+  conforms: true
+  evidence: DMARC present with policy p=reject on signsealship.com.
+- id: dnssec
+  conforms: false
+  evidence: No DNSSEC and no CAA records on signsealship.com.
+- id: security.txt
+  conforms: false
+  evidence: >-
+    /.well-known/security.txt returned 404 on both hosts, despite a real responsible-disclosure
+    program being published in prose at https://signsealship.com/security. A four-line file
+    would close this.
+domain_standard_conformance:
+  market: document execution, notarization and evidence
+  regime: >-
+    US electronic signature and remote online notarization -- ESIGN Act (15 U.S.C. 7001), UETA,
+    and state RON statutes -- over a cryptographic document-evidence stack.
+  standards:
+  - id: rfc3161
+    name: RFC 3161 Time-Stamp Protocol
+    conforms: true
+    declared_in_contract: true
+    evidence: >-
+      components.schemas.ProofSealResponse.timestamps.rfc3161 is a first-class response object
+      with `authority` and `timestampedAtUtc` members, explicitly nullable "when the authority
+      could not be reached". The contract does not merely claim timestamping -- it returns the
+      timestamping authority and the UTC instant as structured data a consumer can verify.
+    spec_location: '#/components/schemas/ProofSealResponse/properties/timestamps/properties/rfc3161'
+  - id: opentimestamps
+    name: OpenTimestamps (Bitcoin-anchored timestamping)
+    conforms: true
+    declared_in_contract: true
+    evidence: >-
+      components.schemas.ProofSealResponse.timestamps.openTimestamps returns `calendar`,
+      `submittedAtUtc` and `status` (example "pending"). An independent, non-vendor anchor
+      published alongside the RFC 3161 one -- two mutually independent timestamp authorities on
+      the same seal.
+    spec_location: '#/components/schemas/ProofSealResponse/properties/timestamps/properties/openTimestamps'
+  - id: cms-pkcs7
+    name: CMS / PKCS#7 detached PDF signature (the ISO 32000 PDF signature mechanism)
+    conforms: true
+    declared_in_contract: partial
+    evidence: >-
+      The contract returns docSha256 (SHA-256 of the exact uploaded bytes, pre-seal) and
+      sealedSha256 (SHA-256 of the sealed PDF) on every seal, and POST /api/passport/seal is
+      documented as returning a PDF sealed with Google Cloud KMS. The signature mechanism itself
+      -- a CMS (PKCS#7) signature covering the PDF ByteRange, validating in any standards-
+      compliant PDF reader -- is stated at https://signsealship.com/security rather than in the
+      spec. The verification claim is independently checkable by the reader without SignSealShip.
+  - id: sha256-hash-chain
+    name: Hash-linked append-only evidence chain
+    conforms: true
+    declared_in_contract: true
+    evidence: >-
+      components.schemas.PassportSealResponse declares manifestSha256 and prevManifestSha256
+      (null on version 1), and RoomPassportVerification declares chainOk, documented as
+      "Recomputed every call: the stored manifest re-hashes to manifestSha256 AND the chain link
+      is intact." The verdict is recomputed per request, never a stored boolean.
+    spec_location: '#/components/schemas/PassportSealResponse, #/components/schemas/RoomPassportVerification'
+  - id: esign-ueta
+    name: ESIGN Act 101(c) consent and UETA record integrity
+    conforms: claimed
+    declared_in_contract: partial
+    evidence: >-
+      OrderDetail carries an `Esign` status value, and the consent record, ESIGN 101(c) timestamp
+      and event timeline are described at https://signsealship.com/security and on the
+      Certificate of Completion. This is a statutory regime rather than a wire standard, so it is
+      recorded as a claim substantiated by published architecture, not as a machine-checkable
+      conformance.
+  - id: ron-state-statutes
+    name: State remote online notarization statutes
+    conforms: claimed
+    declared_in_contract: false
+    evidence: >-
+      Deterministic state-and-document eligibility rules are checked before payment and
+      restricted combinations are refused. SignSealShip additionally publishes the underlying
+      requirements for all 51 US jurisdictions as a free CC BY 4.0 dataset with a statute
+      citation per value (https://signsealship.com/ron-laws.json, HTTP 200, archived at Zenodo
+      DOI 10.5281/zenodo.22213684) -- an unusually strong, independently checkable substantiation
+      of a compliance claim.
+  note: >-
+    REWARD-ONLY, and genuinely earned here. The document-evidence market has real machine
+    standards -- RFC 3161, OpenTimestamps, CMS/PKCS#7 over ISO 32000 ByteRange -- and this
+    contract names two of them as structured response objects rather than as marketing prose. A
+    consumer who already speaks RFC 3161 can validate a SignSealShip seal with no bespoke
+    connector.
+certifications:
+  soc2_type2: not certified -- stated as roadmap at https://signsealship.com/security
+  iso27001: not certified -- explicitly disclaimed at https://signsealship.com/security
+  pci: not claimed; card data is entered directly with Stripe and never reaches SignSealShip servers
+  hipaa: not claimed
+  fedramp: not claimed
+  note: >-
+    The provider publishes an "honest table" that marks SOC 2 Type II as roadmap and ISO 27001 as
+    not held, with the line "If it isn't marked 'built in' here, we don't claim it anywhere."
+    NO CERTIFICATION IS PUBLISHED, so no Compliance pointer is emitted for this provider -- the
+    trust center is real, the certifications are not.

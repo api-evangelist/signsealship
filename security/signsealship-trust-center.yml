@@ -1,0 +1,105 @@
+generated: '2026-09-01'
+method: searched
+source: https://signsealship.com/security
+docs: https://signsealship.com/security
+probed: '2026-09-01'
+http_status: 200
+trust_center:
+  published: true
+  url: https://signsealship.com/security
+  title: Security & Trust
+  self_description: Trust center
+  linked_as: Linked as "Trust Center" in the site header and footer navigation
+certifications:
+  count: 0
+  named: []
+  note: >-
+    NO CERTIFICATIONS ARE HELD OR CLAIMED. This is recorded as a genuine zero, not as a gap in
+    our reading. The page publishes an explicit "honest table" of what is and is not built,
+    headed "If it isn't marked 'built in' here, we don't claim it anywhere."
+honest_table:
+- item: ESIGN Act (15 U.S.C. 7001)
+  status: built in
+  detail: >-
+    Consent captured per 101(c) before any signing; signatures attributed to identified signers;
+    records retained and reproducible.
+- item: UETA
+  status: built in
+  detail: Intent, attribution and record integrity handled by the signing flow and audit trail.
+- item: Tamper-evident sealing (CMS / PKCS#7)
+  status: built in
+  detail: >-
+    Every sealed PDF carries a cryptographic signature verifiable in Adobe Acrobat with no
+    SignSealShip account.
+- item: SHA-256 tamper-evident audit trail
+  status: built in
+  detail: Append-only event log per envelope; each event chains to the previous one.
+- item: RON state rules
+  status: built in
+  detail: >-
+    Deterministic state-and-document rules checked before payment; restricted combinations are
+    refused.
+- item: SOC 2 Type II
+  status: on roadmap
+  detail: >-
+    "Not yet certified, and we won't imply otherwise." No date is claimed pending an auditor.
+- item: ISO 27001
+  status: not certified
+  detail: '"We don''t hold this certification and don''t claim it."'
+controls_published:
+  document_integrity: >-
+    Asymmetric signing key held in Google Cloud KMS; the private key never leaves Google's
+    infrastructure. A hash of the finished PDF is signed and the CMS (PKCS#7) signature is
+    embedded covering the PDF ByteRange, so a single changed byte visibly breaks the seal in any
+    standards-compliant validator -- verifiable on the reader's own machine.
+  audit_trail: >-
+    Append-only event log; each event carries the SHA-256 of the event before it. CONSENT /
+    VIEWED / SIGNED / SEALED events recorded in UTC with originating IP.
+  identity_verification: >-
+    Knowledge-based authentication from public records plus government-ID credential analysis,
+    then a live state-commissioned notary on camera. RON available through notaries in 43
+    jurisdictions.
+  encryption: >-
+    TLS on every path in transit; encrypted at rest on Google Cloud. Customer document buckets
+    block all public access; signing links expire 24 hours after issue; time-limited signed URLs
+    used only where a delivery rail requires them.
+  retention: Sealed documents kept in a dedicated 7-year retention bucket.
+  infrastructure: >-
+    Cloud Run, Cloud SQL (managed PostgreSQL) and Cloud KMS. Each deployed service runs under its
+    own dedicated service account with least-privilege access. Secrets mounted from a managed
+    secret store, never baked into images. Deploys ship by immutable image digest with the source
+    commit verifiable at https://signsealship.com/api/version.
+  edge: >-
+    Cloudflare in front of public /api/* traffic with an origin shared-secret check and rate
+    limits on every public write.
+  inbound_webhooks: >-
+    Fail closed -- every inbound vendor event must pass signature verification, and if a vendor's
+    verification is not configured its route does not exist in production.
+  data_handling: >-
+    Uploads are malware-scanned (event-driven ClamAV) and DLP-classified with category names only
+    -- never content -- in logs.
+subprocessors:
+  published: true
+  disclosure_level: by role, not by name
+  named_directly:
+  - Google Cloud Platform
+  - Stripe
+  by_role:
+  - Remote online notarization network partner
+  - Shipping API partner (USPS, UPS, FedEx labels and tracking)
+  - Print-and-mail fulfillment partner
+  - Transactional email provider
+  note: >-
+    Business customers can request the fully named subprocessor list under a data-processing
+    agreement. Partial naming is a real limitation for a vendor-review process, and the page says
+    so rather than hiding it.
+verifiability_claim: >-
+  The distinguishing posture of this trust center is that its central security claim is
+  independently checkable by the reader without trusting the vendor: open a sealed PDF in free
+  Adobe Reader and inspect the signature panel. Very few trust centers of any size offer a
+  reader-executable proof in place of a badge.
+gaps:
+- No SOC 2, ISO 27001 or any third-party attestation.
+- No named subprocessor list without a DPA.
+- No /.well-known/security.txt -- see security/signsealship-vulnerability-disclosure.yml.
+- No penetration-test summary or architecture attestation published.

@@ -1,0 +1,67 @@
+generated: '2026-09-01'
+method: mixed
+source: >-
+  One skill fetched verbatim from the provider; three generated from
+  openapi/signsealship-partner-api-openapi.yml
+api: SignSealShip Partner API
+note: >-
+  Every generated skill is grounded in method+path pairs read from the published OpenAPI 3.1
+  document. The spec declares NO operationIds on any of its 39 operations, so method+path is the
+  only stable operation identifier available. No operation, parameter, status code, quota or
+  limit named in these skills was invented.
+skills:
+- name: Sign
+  file: signsealship-sign-skill.md
+  method: searched
+  source: https://docs.signsealship.com/.well-known/agent-skills/sign/skill.md
+  http_status: 200
+  fetched: '2026-09-01'
+  provider_published: true
+  note: >-
+    Published by SignSealShip itself and referenced as skills[0].url in the A2A agent card at
+    https://docs.signsealship.com/.well-known/agent-card.json. Saved verbatim, never edited.
+    Broad product-orientation skill covering orders, rooms, webhooks and verification.
+- name: run-a-verified-closing
+  file: signsealship-run-a-verified-closing.md
+  method: generated
+  operations: 9
+  flow: >-
+    Create room -> attach orders -> add participants -> share the bearer link -> seal a
+    hash-chained Closing Passport -> rotate on leak.
+  emphasis: >-
+    The 20-versions-per-room seal cap, the irreversibility of sealing and of rotation, and the
+    fact that removing a participant does not revoke a link they hold.
+- name: place-and-track-an-order
+  file: signsealship-place-and-track-an-order.md
+  method: generated
+  operations: 8
+  flow: >-
+    Check the key -> create the order with an Idempotency-Key -> mint Stripe checkout -> rehearse
+    in the sandbox -> track by webhook -> read launchpad and analytics.
+  emphasis: >-
+    No refund/void/cancel operation exists anywhere in the API; branch on statusGroup, not status;
+    the two-line shipping quote shape that replaced flat-rate shipping on 2026-08-01.
+- name: seal-and-verify-a-document
+  file: signsealship-seal-and-verify-a-document.md
+  method: generated
+  operations: 6
+  flow: >-
+    Seal a PDF with KMS -> read docSha256/sealedSha256 and the two timestamp authorities -> verify
+    publicly with no key -> subscribe to passport.sealed.
+  emphasis: >-
+    verified vs verified_test, nullable RFC 3161 / OpenTimestamps members, the 35 MB part limit,
+    and the identical 404 for unknown and malformed codes.
+shared_rules:
+  auth: 'Authorization: Bearer sss_pk_... (test keys are sss_pk_test_)'
+  idempotency: Idempotency-Key header, 8-255 chars, on order create and checkout mint
+  errors: '{"error": "<sentence>"} in application/json -- NOT RFC 9457; branch on status code'
+  rate_limits: 60/min partner-write, 30/min public-read, 12/min public-write, no headers returned
+  404_semantics: unknown and not-yours are deliberately indistinguishable
+  status_field: build on statusGroup, never on the raw status string
+  reversibility: sealing and room-code rotation are irreversible; there is no refund operation
+  cross_links:
+  - conventions/signsealship-conventions.yml
+  - errors/signsealship-problem-types.yml
+  - rate-limits/signsealship-rate-limits.yml
+  - sandbox/signsealship-sandbox.yml
+  - asyncapi/signsealship-webhooks.yml

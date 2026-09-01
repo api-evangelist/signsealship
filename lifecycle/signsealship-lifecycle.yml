@@ -1,0 +1,113 @@
+generated: '2026-09-01'
+method: searched
+source: >-
+  https://docs.signsealship.com/changelog/overview,
+  https://signsealship.com/status,
+  https://signsealship.com/api/version,
+  openapi/signsealship-partner-api-openapi.yml
+versioning:
+  scheme: unversioned path, single surface
+  current_version: 1.0.0
+  version_in_path: false
+  version_header: none
+  detail: >-
+    info.version is 1.0.0. Paths are /api/..., never /api/v1/..., so there is no way to pin a
+    version, and no way to run old and new side by side. Change is announced in a dated changelog
+    and shipped to everyone at once.
+  policy_published: false
+build_provenance:
+  endpoint: https://signsealship.com/api/version
+  probed: '2026-09-01'
+  http_status: 200
+  observed:
+    service: signsealship-api
+    version: f0a0e68876e1
+    commit: f0a0e68876e149d2fb772b38d2785476d385f1b4
+    treeStatus: clean
+    cleanBuild: true
+    builtAt: '2026-08-26T11:43:31Z'
+  note: >-
+    A public, unauthenticated build-identity endpoint returning the exact git commit and a
+    clean-tree assertion. Deploys ship by immutable image digest with the source commit
+    verifiable here. This is a stronger deployment-provenance signal than most providers of any
+    size publish, and it is not mentioned in apis.json or the OpenAPI -- it is only named on the
+    security page.
+deprecation:
+  policy_published: false
+  sunset_header: not published
+  deprecation_header: not published
+  rfc8594: false
+  deprecated_operations: []
+  detail: >-
+    No deprecation policy, no notice period, and no RFC 8594 Sunset/Deprecation headers. Zero of
+    the 39 operations carry `deprecated: true`. Breaking change has nevertheless already happened
+    and was announced only in the changelog: the 2026-08-01 release replaced flat-rate shipping
+    with two quote lines (ShippingCarrierRate + ShippingHandlingFee) and changed the shape of the
+    order quote, and separately changed GET /api/partner/me from 403 to 401 for a missing
+    credential. Both are consumer-visible contract changes shipped without a deprecation window.
+breaking_changes_observed:
+- date: '2026-08-01'
+  change: >-
+    Order quote shape changed -- shipping became two lines (ShippingCarrierRate,
+    ShippingHandlingFee) with an address-dependent postage amount. Flat-rate shipping removed.
+  notice: changelog entry only
+- date: '2026-08-01'
+  change: >-
+    GET /api/partner/me with no credential now returns 401 (previously 403). 403 is now reserved
+    for a valid session with no linked partner.
+  notice: changelog entry only
+status_page:
+  url: https://signsealship.com/status
+  probed: '2026-09-01'
+  http_status: 200
+  type: first-party, self-reported, uncached
+  machine_readable: false
+  components:
+  - Website
+  - API & checkout
+  - E-sign engine
+  - Document sealing (KMS)
+  - Database
+  - Notary sessions
+  - Shipping & tracking
+  incident_history: last 90 days, from an automated ops monitor
+  observed_state: >-
+    On 2026-09-01 the page reported all seven components Operational while simultaneously
+    carrying an open critical incident ("Infrastructure monitoring alert", detected 2026-08-25),
+    alongside roughly 20 resolved critical alerts in the preceding week. Incident titles are
+    generic by design because details can reference customer orders.
+  caveats:
+  - >-
+    Statuses are live checks run at request time and self-reported by the platform, not
+    third-party monitoring.
+  - >-
+    Rows reflect SignSealShip's own side only -- the E-sign row does not probe BoldSign, the
+    notary row does not probe the RON partner network, and the shipping row does not probe
+    carriers.
+  - No status API, no RSS/Atom feed, no webhook, no components JSON. A machine cannot subscribe.
+sla:
+  published: false
+  detail: >-
+    No SLA document, machine-readable or otherwise. The provider names this itself in the gaps[]
+    list of its own /.well-known/api-onboarding.json: "No machine-readable SLA document;
+    https://signsealship.com/status is a human-readable status page."
+support:
+  contact: https://signsealship.com/contact
+  phone: (888) 964-1991
+  security: security@signsealship.com
+maturity:
+  self_declared: self-serve
+  source: https://signsealship.com/.well-known/api-onboarding.json
+  release_stages_observed:
+  - stage: GA
+    feature: Partner analytics (2026-08-02)
+  - stage: limited release
+    feature: >-
+      Playbooks API (2026-08-02). Disabled by default; both endpoints return 404 until enabled
+      for the account, and the endpoints are absent from the published OpenAPI entirely.
+data_retention:
+  sealed_documents: 7 years, dedicated retention bucket
+  uploaded_bytes: streamed in memory, never written to disk, discarded after sealing
+  signing_links: expire 24 hours after issue
+  webhook_payloads: never stored; only delivery metadata is retained
+  source: https://signsealship.com/security

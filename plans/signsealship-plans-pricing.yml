@@ -1,0 +1,128 @@
+generated: '2026-09-01'
+method: searched
+source: https://signsealship.com/pricing
+docs: https://signsealship.com/pricing
+secondary_sources:
+- https://signsealship.com/.well-known/api-onboarding.json
+- https://signsealship.com/llms.txt
+currency: USD
+model: >-
+  Two stacked models. Every document is priced per use on an itemized receipt -- notary fee
+  passed through at cost, platform fees on separate disclosed lines, postage rated live from the
+  carrier and never marked up. On top of that, optional monthly partner plans buy a workflow-fee
+  discount, a Closing Room quota and, at Pro Office and above, API capability. There is no free
+  live tier: public verification and room-lookup reads are free and keyless forever, and a trial
+  key gives sandbox access, but creating a live order requires payment.
+plan_count: 4
+plans:
+- name: Trial key
+  price: 0
+  billing_period: none
+  included:
+    active_closing_rooms: 5
+    api_access: sandbox only
+  quota: 5 active Closing Rooms
+  notes: >-
+    Issued instantly by POST /api/partner/request when the work email domain and use case
+    qualify; otherwise queued for human review. Both outcomes return HTTP 200, so the status code
+    does not tell you which happened -- the key arrives by email, once.
+  url: https://signsealship.com/partner
+- name: Partner Link
+  price: 49
+  currency: USD
+  billing_period: month
+  included:
+    active_closing_rooms: 5
+    workflow_fee_discount: 5%
+    branded_intake_link: true
+    partner_webhooks: false
+    order_api: false
+  quota: 5 active Closing Rooms
+  notes: >-
+    B2B per-document rates and a branded intake link. Explicitly does NOT include partner
+    webhooks or the Order API. Client analytics dashboard is a +$99/mo add-on at this tier.
+  url: https://signsealship.com/pricing
+- name: Pro Office
+  price: 149
+  currency: USD
+  billing_period: month
+  included:
+    active_closing_rooms: 25
+    workflow_fee_discount: 10%
+    partner_webhooks: true
+    order_api: true
+  quota: 25 active Closing Rooms
+  notes: >-
+    THE API TIER. This is where partner webhooks and the write side of the Order API unlock.
+    Client analytics dashboard is a +$99/mo add-on at this tier.
+  url: https://signsealship.com/pricing
+- name: Closing Desk
+  price: 399
+  currency: USD
+  billing_period: month
+  included:
+    active_closing_rooms: unlimited
+    workflow_fee_discount: 15%
+    partner_webhooks: true
+    order_api: true
+    priority_notary_routing: true
+    dedicated_closing_coordinator: true
+    client_analytics_dashboard: included
+  quota: unlimited active Closing Rooms
+  url: https://signsealship.com/pricing
+usage_pricing:
+  note: >-
+    Per-document prices as published on the pricing page on 2026-09-01. Quotes are itemized
+    before payment; the notary fee is passed through at cost and never varies by document type,
+    and government fees and postage are never marked up or discounted.
+  base_services:
+  - service: E-signature
+    from: 12
+    detail: Up to 4 signers who never pay; ESIGN and UETA compliant; SHA-256 audit trail.
+  - service: Remote online notarization
+    from: 49
+    detail: First seal and identity verification included; live commissioned notary, 24/7.
+  - service: Sign / Seal / Ship (full service)
+    from: 61.95
+    detail: Notarized and delivered, tracked.
+  - service: Out-of-State Seller Package
+    from: 129
+    detail: Plus delivery. Real-estate flagship package.
+  delivery:
+  - service: Print and mail
+    price: 12.95
+    detail: Flat. Three mail classes -- Standard, Certified (USPS proof of delivery), Certified + return receipt.
+  - service: Carrier shipping
+    price: 14.95
+    detail: Handling fee plus live-rated postage passed through at the quoted carrier rate.
+  add_ons:
+  - name: Rush handling
+    price: 19.95
+  - name: Extra signer
+    price: 15
+  - name: Extra seal
+    price: 15
+  - name: Witness on demand
+    price: 19
+  - name: Overnight handling
+    price: 14.95
+  - name: Scan-back to a partner on sealing
+    price: 19
+  - name: Secure vault (1 year of re-download)
+    price: 9.95
+  - name: Fax delivery with sealed transmission certificate
+    price: 9.00
+discounts:
+  note: >-
+    Percentage and fixed-amount discount codes were added 2026-08-01. They apply at quote time,
+    redeem exactly once when payment clears, and appear on quotes and orders as a negative-amount
+    `Discount` line.
+billing_integration:
+  processor: Stripe
+  mechanism: >-
+    POST /api/partner/orders/{code}/checkout mints a Stripe hosted-checkout URL. Minting never
+    changes order state -- state advances only via the verified Stripe webhook after payment
+    clears.
+api_pricing_gate: >-
+  The Order API and partner webhooks are gated at the $149/mo Pro Office tier. A trial key can
+  exercise the sandbox order lifecycle but cannot create a live order.

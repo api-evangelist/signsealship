@@ -1,0 +1,162 @@
+overlay: 1.0.0
+info:
+  title: API Evangelist enrichment overlay for the SignSealShip Partner API
+  version: 1.0.0
+x-provenance:
+  generated: '2026-09-01'
+  method: generated
+  source: openapi/signsealship-partner-api-openapi.yml
+  extends: openapi/signsealship-partner-api-openapi.yml
+  upstream: https://docs.signsealship.com/api-reference/openapi.json
+  note: >-
+    Non-destructive enhancements only. The upstream specification is never mutated; every change
+    below is expressed as an Overlay 1.0.0 action against a JSONPath target. Nothing here invents
+    an operation, a parameter or a response -- the actions add documentation links, cross-links to
+    artifacts in this repo, and machine-readable markers for facts the provider states in prose
+    elsewhere.
+actions:
+- target: $.info
+  description: Link the specification to the provider's published operational documents.
+  update:
+    x-artifact-links:
+      authentication: https://docs.signsealship.com/api-reference/authentication
+      rate_limits: https://docs.signsealship.com/api-reference/authentication
+      changelog: https://docs.signsealship.com/changelog/overview
+      status: https://signsealship.com/status
+      security: https://signsealship.com/security
+      pricing: https://signsealship.com/pricing
+      onboarding: https://signsealship.com/.well-known/api-onboarding.json
+      apis_json: https://signsealship.com/.well-known/apis.json
+      llms_txt: https://docs.signsealship.com/llms.txt
+      agent_card: https://docs.signsealship.com/.well-known/agent-card.json
+      build_identity: https://signsealship.com/api/version
+- target: $.info
+  description: >-
+    Record the rate-limit policies the docs publish but the contract does not, so a generated
+    client can carry them.
+  update:
+    x-rate-limits:
+      exhaustion_status: 429
+      response_headers: none
+      policies:
+      - {policy: partner-write, limit: 60, window: 1m, keyed_by: partner key}
+      - {policy: public-read, limit: 30, window: 1m, keyed_by: ip}
+      - {policy: partner-request, limit: 5, window: 1h, keyed_by: ip}
+      - {policy: public-write, limit: 12, window: 1m, keyed_by: ip}
+      - {policy: partner-portal, limit: 120, window: 1m, keyed_by: session}
+- target: $.info
+  description: Record the error-envelope shape and the fact that it is not RFC 9457.
+  update:
+    x-error-format:
+      media_type: application/json
+      rfc9457: false
+      shape: '{ "error": "<human sentence>" }'
+      catalog: errors/signsealship-problem-types.yml
+- target: $.info
+  description: >-
+    Record the coarse permission strings that appear in operation descriptions but in no
+    securityScheme.
+  update:
+    x-permissions-observed:
+    - orders:read
+    - orders:write
+    - webhooks:read
+    - webhooks:write
+    x-permissions-note: >-
+      Named in operation descriptions only. Not declared in components.securitySchemes, and
+      contradicted by /.well-known/api-onboarding.json, which states there is no scope-string
+      model.
+- target: $.info
+  description: Record the environment model, since it is a property of the key rather than of the request.
+  update:
+    x-environments:
+      model: key-scoped
+      live_prefix: sss_pk_
+      test_prefix: sss_pk_test_
+      marker_field: environment
+      public_verdict_for_test: verified_test
+      detail: sandbox/signsealship-sandbox.yml
+- target: $.info
+  description: >-
+    Record the seven webhook topics the docs publish, since the specification declares no
+    top-level webhooks block.
+  update:
+    x-webhook-topics:
+    - passport.sealed
+    - room.order_attached
+    - room.passport_sealed
+    - order.created
+    - payment.cleared
+    - signature.completed
+    - shipment.delivered
+    x-webhook-signature:
+      header: SignSealShip-Signature
+      format: t=<unix seconds>,v1=<hex hmac>
+      event_header: SignSealShip-Event
+      rotation_overlap: 24h dual signing
+      catalog: asyncapi/signsealship-webhooks.yml
+- target: $.info
+  description: >-
+    Record the reversibility profile per write surface -- what can be taken back, and inside what
+    window.
+  update:
+    x-reversibility:
+      grade: verified
+      irreversible:
+      - "POST /api/rooms/{roomCode}/passport"
+      - "POST /api/passport/seal"
+      - "POST /api/rooms/{roomCode}/rotate"
+      reversible:
+      - action: "POST /api/rooms/{roomCode}/orders"
+        reversal: "DELETE /api/rooms/{roomCode}/orders/{orderCode}"
+      - action: "POST /api/rooms/{roomCode}/participants"
+        reversal: "DELETE /api/rooms/{roomCode}/participants/{participantId}"
+      - action: "POST /api/partner/webhooks"
+        reversal: "DELETE /api/partner/webhooks/{id}"
+      - action: "POST /api/passport/webhooks"
+        reversal: "DELETE /api/passport/webhooks/{id}"
+      windowed:
+      - action: "POST /api/partner/webhooks/{id}/rotate"
+        window: 24h dual signing
+      refunds: no refund, void or cancel operation exists in the API
+      detail: conventions/signsealship-conventions.yml
+- target: $.info
+  description: >-
+    Record the domain standards the contract itself declares, for buyers who already speak them.
+  update:
+    x-domain-standards:
+    - id: rfc3161
+      declared_in: '#/components/schemas/ProofSealResponse/properties/timestamps/properties/rfc3161'
+    - id: opentimestamps
+      declared_in: '#/components/schemas/ProofSealResponse/properties/timestamps/properties/openTimestamps'
+    - id: sha256-hash-chain
+      declared_in: '#/components/schemas/PassportSealResponse'
+    - id: cms-pkcs7
+      declared_in: 'https://signsealship.com/security (prose, not the spec)'
+    detail: conformance/signsealship-conformance.yml
+- target: $.components.parameters.IdempotencyKey
+  description: >-
+    Flag the one thing the idempotency contract does not state -- how long a key is remembered.
+  update:
+    x-retention: not published
+    x-note: >-
+      Replay semantics are stated; the retention window is not, so a client cannot know when a
+      key stops being safe to reuse.
+- target: $.servers[0]
+  description: Record the second, byte-identical publication location of this specification.
+  update:
+    x-spec-mirrors:
+    - https://docs.signsealship.com/api-reference/openapi.json
+    - https://signsealship.com/openapi.json
+- target: $.tags
+  description: >-
+    Note that the shipped surface has grown past the published specification.
+  update:
+    x-undocumented-surface:
+      feature: Playbooks API
+      operations: 2 (list, start)
+      announced: '2026-08-02'
+      state: limited release, disabled by default, returns 404 until enabled
+      note: >-
+        Announced in the changelog but absent from this specification, so the published contract
+        trails the shipped API.

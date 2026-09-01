@@ -1,0 +1,83 @@
+generated: '2026-09-01'
+method: searched
+source: https://docs.signsealship.com/api-reference/authentication
+docs: https://docs.signsealship.com/api-reference/authentication
+limit_count: 5
+exhaustion_status: 429
+window_model: >-
+  Fixed one-minute windows unless noted. Requests over a limit are rejected with 429 Too Many
+  Requests; back off and retry after the window resets.
+limits:
+- policy: partner-write
+  limit: 60
+  window: 1 minute
+  scope: per-key
+  keyed_by: Partner API key
+  applies_to: All Order, Closing Room and Closing Passport partner routes.
+- policy: public-read
+  limit: 30
+  window: 1 minute
+  scope: per-ip
+  keyed_by: IP address
+  applies_to: Public room view and Closing Passport verification.
+  note: >-
+    Tighter than partner writes because the public room view aggregates live status across every
+    attached order. The provider's own room page polls once every 15 seconds.
+- policy: partner-request
+  limit: 5
+  window: 1 hour
+  scope: per-ip
+  keyed_by: IP address
+  applies_to: POST /api/partner/request (self-serve key request).
+- policy: public-write
+  limit: 12
+  window: 1 minute
+  scope: per-ip
+  keyed_by: IP address
+  applies_to: POST /api/passport/seal and the public Proof Passport verify endpoints.
+- policy: partner-portal
+  limit: 120
+  window: 1 minute
+  scope: per-session
+  keyed_by: Dashboard session
+  applies_to: >-
+    Session-authenticated dashboard routes and the /api/partner/webhooks management routes
+    (session or key).
+response_headers:
+  documented: []
+  note: >-
+    NO RATE-LIMIT RESPONSE HEADERS ARE DOCUMENTED. Neither the authentication page nor the
+    OpenAPI declares X-RateLimit-*, RateLimit-* (RFC 9331 draft) or Retry-After. The five limits
+    are published as a prose table only, so a client learns its remaining budget by getting a
+    429, never before. The provider's own /.well-known/api-onboarding.json lists this in its
+    self-declared gaps[]: "a consolidated per-plan rate-limit table is not yet published."
+  recommended:
+  - RateLimit-Limit
+  - RateLimit-Remaining
+  - RateLimit-Reset
+  - Retry-After
+plan_variance:
+  documented: false
+  note: >-
+    The published limits are keyed by credential type and route class, not by subscription tier.
+    No per-plan rate table is published; plan tiers gate FEATURES (order API and webhooks unlock
+    at Pro Office) and RESOURCE QUOTAS (active Closing Rooms), not request rates.
+quotas:
+- resource: Active Closing Rooms
+  trial: 5
+  partner-link: 5
+  pro-office: 25
+  closing-desk: unlimited
+  enforcement: 409 on POST /api/rooms
+- resource: Orders attached per room
+  limit: 50
+  enforcement: 409 on POST /api/rooms/{roomCode}/orders
+- resource: Participants per room
+  limit: 25
+  enforcement: 409 on POST /api/rooms/{roomCode}/participants
+- resource: Closing Passport versions per room
+  limit: 20
+  enforcement: 409 on POST /api/rooms/{roomCode}/passport
+- resource: Proof Passport upload size
+  limit: 35 MB
+  enforcement: POST /api/passport/seal multipart part `file`

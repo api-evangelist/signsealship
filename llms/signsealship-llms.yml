@@ -1,0 +1,39 @@
+generated: '2026-09-01'
+method: searched
+note: >-
+  Provenance sidecar for the two verbatim llms.txt files in this directory -- a .txt cannot carry
+  frontmatter. Both were fetched on 2026-09-01 and saved byte-for-byte; neither was authored or
+  edited by API Evangelist. No llms-full.txt is committed (it is gitignored) even though the
+  provider serves one, because those verbatim docs dumps embed vendor example tokens.
+documents:
+- file: signsealship-llms.txt
+  url: https://signsealship.com/llms.txt
+  http_status: 200
+  bytes: 7374
+  fetched: '2026-09-01'
+  subject: SignSealShip the product
+  contents: >-
+    Service list with prices, the itemized pricing model, add-ons, notary and identity-verification
+    process, RON jurisdictional coverage (43 authorized jurisdictions, named exclusions per state),
+    ESIGN/UETA posture, partner plan tiers, core pages, state pages, the CC BY 4.0 RON-laws dataset
+    with its Zenodo DOI, guides index, and the Spanish-language site.
+  note: >-
+    Unusually substantive for a root llms.txt -- it states jurisdictional exclusions and prices
+    rather than just linking pages. The site footer explicitly addresses AI agents and links to it.
+- file: signsealship-docs-llms.txt
+  url: https://docs.signsealship.com/llms.txt
+  http_status: 200
+  bytes: 12063
+  fetched: '2026-09-01'
+  subject: The developer documentation
+  contents: >-
+    A 44-entry index of every docs page, each linking its .md twin, plus an "OpenAPI Specs" section
+    pointing at https://docs.signsealship.com/api-reference/openapi.json.
+  note: >-
+    Mintlify-generated. Every listed page is separately retrievable as markdown at its .md URL,
+    so the whole documentation corpus is machine-readable without HTML scraping.
+llms_full:
+  url: https://docs.signsealship.com/llms-full.txt
+  http_status: 200
+  committed: false
+  reason: '*-llms-full.txt is gitignored per the enrichment contract (vendor example tokens).'

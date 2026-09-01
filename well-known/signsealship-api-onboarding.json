@@ -1,0 +1,146 @@
+{
+  "aod": "0.1",
+  "provider": {
+    "name": "SignSealShip",
+    "url": "https://signsealship.com",
+    "portalUrl": "https://docs.signsealship.com",
+    "apisJsonUrl": "https://signsealship.com/.well-known/apis.json"
+  },
+  "maturity": "self-serve",
+  "account": {
+    "required": true,
+    "signupUrl": "https://signsealship.com/partner",
+    "agentPolicy": "allowed",
+    "prerequisites": [
+      "A business-domain work email address. Free-mail domains are accepted but route to human review rather than an instant key.",
+      "A coherent, on-topic description of the intended use case."
+    ],
+    "plans": [
+      {
+        "name": "Trial key",
+        "requiredFor": "Evaluation against the sandbox. Issued instantly by POST /api/partner/request when the work email and use case qualify.",
+        "url": "https://signsealship.com/partner"
+      },
+      {
+        "name": "Partner Link — $49/mo",
+        "requiredFor": "5 active Closing Rooms, B2B per-document rates, branded intake link. Does NOT include partner webhooks or the order API.",
+        "url": "https://signsealship.com/pricing"
+      },
+      {
+        "name": "Pro Office — $149/mo",
+        "requiredFor": "Partner webhooks and order API access. This is the tier at which the write API is unlocked. 25 active Closing Rooms.",
+        "url": "https://signsealship.com/pricing"
+      },
+      {
+        "name": "Closing Desk — $399/mo",
+        "requiredFor": "Unlimited Closing Rooms, 15% off workflow fees, included analytics.",
+        "url": "https://signsealship.com/pricing"
+      }
+    ],
+    "termsOfService": {
+      "url": "https://signsealship.com/legal/terms",
+      "acceptance": "explicit"
+    }
+  },
+  "verification": [
+    {
+      "name": "Work-email and use-case screen",
+      "description": "POST /api/partner/request evaluates the submitted email domain and use case. A business-domain address with a coherent, on-topic use case is issued a trial key immediately and emailed once. Anything else is queued for human review. Both outcomes return HTTP 200, so the response status does not distinguish them — check for the emailed key.",
+      "blocking": true,
+      "expectedLatency": "instant when it qualifies; otherwise human review",
+      "url": "https://signsealship.com/partner"
+    }
+  ],
+  "registration": {
+    "applicationNoun": "partner",
+    "owner": "organization",
+    "mechanisms": [
+      {
+        "type": "open",
+        "description": "Eight read operations require no credential at all: room lookup and the public document-verification endpoints. They resolve a SignSealShip-issued code, so they are open rather than useful for arbitrary querying — a stranger's code returns 404 {\"verdict\":\"unknown\"}.",
+        "auth": "anonymous",
+        "docsUrls": ["https://docs.signsealship.com/api-reference/openapi.json"]
+      },
+      {
+        "type": "management-api",
+        "description": "Self-serve key request. POST https://signsealship.com/api/partner/request is public and unauthenticated, rate limited to 5 requests per hour per IP. Returns 200 whether the key is issued instantly or the request is queued.",
+        "registrationEndpoint": "https://signsealship.com/api/partner/request",
+        "auth": "anonymous",
+        "docsUrls": ["https://docs.signsealship.com"]
+      },
+      {
+        "type": "console-only",
+        "description": "Existing partners rotate and manage keys in the dashboard.",
+        "baseUrl": "https://signsealship.com/partner/settings/keys",
+        "auth": "session",
+        "docsUrls": ["https://docs.signsealship.com/api-reference/authentication"]
+      }
+    ]
+  },
+  "authentication": {
+    "methods": [
+      {
+        "id": "anonymous",
+        "type": "none",
+        "bootstrap": "No credential needed for the public verification and room-lookup reads."
+      },
+      {
+        "id": "partner-key",
+        "type": "bearer-env",
+        "env": ["SIGNSEALSHIP_PARTNER_KEY"],
+        "bootstrap": "Request a key at https://signsealship.com/partner, then send it as `Authorization: Bearer sss_pk_...`."
+      }
+    ]
+  },
+  "credentials": [
+    {
+      "type": "api-key",
+      "fields": {
+        "api_key": "partner key, prefix sss_pk_"
+      },
+      "oneTimeDisplay": true,
+      "rotation": "Emailed once on issue. Rotate in the dashboard at /partner/settings/keys."
+    }
+  ],
+  "scopes": {
+    "model": "plan-gated",
+    "notes": "There is no scope-string model. Access is gated by plan tier: read/verification operations are open, and the order and webhook write APIs unlock at Pro Office. A sandbox mirrors the order lifecycle at /api/partner/sandbox/* so integrations can be built before a live plan exists."
+  },
+  "flow": {
+    "steps": [
+      {
+        "order": 1,
+        "description": "Request a key.",
+        "method": "POST",
+        "url": "https://signsealship.com/api/partner/request"
+      },
+      {
+        "order": 2,
+        "description": "Collect the key from the email. It is shown once.",
+        "method": "GET",
+        "url": "https://signsealship.com/partner/settings/keys"
+      },
+      {
+        "order": 3,
+        "description": "Build against the sandbox order lifecycle before moving to live.",
+        "method": "POST",
+        "url": "https://signsealship.com/api/partner/sandbox/orders/{code}/advance"
+      }
+    ]
+  },
+  "economics": {
+    "pricingUrl": "https://signsealship.com/pricing",
+    "freeTier": "Trial key for sandbox evaluation. Public verification and room-lookup reads are free and keyless, permanently. There is no free tier for live order creation — that requires a paid plan, and each order also carries its own per-use fees with government and notary charges itemized and passed through at cost.",
+    "rateLimitsUrl": "https://docs.signsealship.com",
+    "slaUrl": "https://signsealship.com/status"
+  },
+  "gaps": [
+    "Rate limits are documented for the public key-request endpoint (5/hour/IP) but a consolidated per-plan rate-limit table is not yet published.",
+    "No RFC 7591 dynamic client registration. Key issuance is a single public POST plus an email, which is simpler but not fully programmatic end to end — an agent cannot complete onboarding without reading a mailbox.",
+    "No machine-readable SLA document; https://signsealship.com/status is a human-readable status page."
+  ],
+  "securityProfile": {
+    "transport": "TLS only. HSTS with preload.",
+    "notes": "SignSealShip is a technology platform, not a law firm or a notary. Notarial acts are performed by independent commissioned notaries and an approved remote online notarization provider under the law of the commissioning state."
+  }
+}

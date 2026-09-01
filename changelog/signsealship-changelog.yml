@@ -1,0 +1,128 @@
+generated: '2026-09-01'
+method: searched
+source: https://docs.signsealship.com/changelog/overview
+machine_readable_source: https://docs.signsealship.com/changelog/overview.md
+docs: https://docs.signsealship.com/changelog/overview
+scheme: dated release notes, no version numbers
+cadence: weekly (self-described "weekly release notes")
+current_api_version: 1.0.0
+current_build:
+  version: f0a0e68876e1
+  commit: f0a0e68876e149d2fb772b38d2785476d385f1b4
+  built_at: '2026-08-26T11:43:31Z'
+  source: https://signsealship.com/api/version
+format_note: >-
+  Mintlify MDX <Update> blocks with a date in the description and a tags[] array, grouped under
+  New / Updates / Fixed headings. Each entry is also published as markdown at the .md twin of the
+  page, which makes it machine-readable without scraping HTML. There is no RSS/Atom feed and no
+  changelog API.
+window: recent entries only -- 2026-07-13 through 2026-08-02
+entries:
+- date: '2026-08-02'
+  label: Partner analytics GA + playbooks limited release
+  tags: [Partner API, Analytics, Automation]
+  breaking: false
+  additions:
+  - >-
+    Partner analytics GA -- request-time, tenant-scoped 90-day view of order volume, lifecycle
+    funnel, paid-to-completed turnaround, service mix, revenue and attached evidence artifacts.
+    The API contract accepts a selectable 1-366 day window.
+  - >-
+    Playbooks API (limited release) -- list and start registry-owned automations with typed form
+    parameters. Callers select a registered key and can never submit workflow source or inject
+    steps. First playbook `approval_gate` waits up to 30 days for a human decision and resolves
+    expired waits as `expired`. Disabled by default; both endpoints return 404 until enabled.
+  highlights:
+  - >-
+    The Playbooks endpoints are NOT in the published OpenAPI, so the spec now trails the shipped
+    surface by two operations.
+- date: '2026-08-01'
+  label: Live shipping rates, mail evidence tiers, discount codes, standalone fax
+  tags: [Orders, Shipping, Pricing, Partner API]
+  breaking: true
+  breaking_changes:
+  - >-
+    Order quote shape changed. Shipping is now TWO lines -- ShippingCarrierRate +
+    ShippingHandlingFee -- and the postage amount varies by destination address. Flat-rate
+    shipping was removed.
+  - >-
+    GET /api/partner/me with no credential returns 401 (previously 403). 403 is now reserved for
+    a valid session that has not linked a partner.
+  additions:
+  - Live carrier rate-shopping at order time with real prices and carrier delivery dates.
+  - >-
+    Print & mail evidence tiers -- Standard (no delivery proof), Certified (USPS proof of
+    delivery), Certified + return receipt.
+  - >-
+    Discount codes, percentage or fixed amount, applied at quote time and redeemed exactly once
+    when payment clears. Appear as a negative-amount `Discount` line.
+  - Standalone fax with a sealed transmission certificate, priced as fax only.
+  fixes:
+  - >-
+    Corrected the documented `lines` example and the `services` field shape in the API reference
+    to match what the API actually returns (PascalCase line types; `services` is a
+    comma-separated flags string on order responses).
+- date: '2026-07-17'
+  label: Order API + order webhooks
+  tags: [Partner API, Orders, Webhooks]
+  breaking: false
+  additions:
+  - >-
+    Order API -- POST /api/partner/orders takes the client's completed PDF (or a fill-online
+    fill_token), prices server-side from the B2B price book with the partner's tier discount, and
+    can mint the Stripe hosted-checkout session in the same call. Order state advances only via
+    the verified Stripe webhook.
+  - >-
+    Four new webhook topics -- order.created, payment.cleared, signature.completed,
+    shipment.delivered -- echoing the partner's external_reference for correlation.
+  - >-
+    The /api/partner/webhooks management routes now accept the bearer partner API key
+    (previously dashboard-session only), enabling server-to-server subscription management.
+  - >-
+    POST /api/partner/webhooks/{id}/rotate reissues a signing secret with a 24-hour
+    dual-signature overlap.
+  - GET /api/partner/webhooks/{id}/deliveries returns a metadata-only delivery-attempt feed.
+- date: '2026-07-13'
+  label: Agent actions review queue
+  tags: [Admin, Trust & Safety]
+  breaking: false
+  additions:
+  - >-
+    Admin queue listing every action an AI agent has proposed on a Closing Room, with Approve /
+    Reject on each. Drafted content is displayed safely and never rendered as HTML.
+- date: '2026-07-13'
+  label: Human review before anything leaves a Closing Room
+  tags: [Trust & Safety, Concierge]
+  breaking: false
+  additions:
+  - >-
+    Outbound agent actions on a room are proposed to an admin queue first; only approved actions
+    execute. Agents never send on their own and never choose the recipient.
+  - >-
+    Server-resolved recipients -- the destination for a partner update comes from the Closing
+    Room record, not from anything an agent supplied.
+  - Approved partner updates are sent exactly once; retrying an approval does not resend.
+- date: '2026-07-13'
+  label: AI concierge in every Closing Room
+  tags: [Concierge, Partner API]
+  breaking: false
+  additions:
+  - >-
+    First-party AI assistant inside Closing Rooms, grounded in live room data, with human handoff.
+    No third-party scripts, no cookies.
+  - >-
+    Closing health advisory (partner-only) -- green/amber/red pill AI-drafted from live room
+    state, timestamped, with a "needs human review" flag, labeled a working note and not legal
+    advice.
+observations:
+- >-
+  Breaking changes ship in the changelog with no deprecation window, no Sunset header and no
+  version to pin against -- see lifecycle/signsealship-lifecycle.yml.
+- >-
+  The 2026-07-13 entries describe an unusually explicit agent-safety posture: agent-proposed
+  actions are human-approved, recipients are server-resolved rather than agent-supplied, and
+  delivery is exactly-once. That is a governance control, not a feature, and it is documented
+  in the changelog rather than anywhere an integrator would look for it.
+gaps:
+- No RSS/Atom feed, no changelog API, no per-entry permalink anchors published.
+- Entries are undated at the API-version level; nothing ties an entry to a spec revision.
