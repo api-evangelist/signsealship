@@ -4,6 +4,22 @@ type: Index
 description: E-signature, remote online notarization coordination, document verification and physical delivery in one workflow.
   The API covers onboarding, orders, closing rooms, closing passports, proof passports, webhooks and a sandbox. Also indexes
   a free CC BY 4.0 dataset of remote online notarization requirements for all 51 U.S. jurisdictions.
+accessModel:
+  pricing: freemium
+  onboarding: self-serve
+  trial: false
+  try_now: true
+  public: false
+  label: Freemium · Self-serve signup
+  confidence: high
+  source:
+  - plans
+  - authentication
+  - rate-limits
+  - security
+  - sandbox
+  generated: '2026-09-02'
+  method: derived
 image: https://signsealship.com/brand/icon-512.png
 url: https://signsealship.com/.well-known/apis.json
 created: '2026-08-31'
