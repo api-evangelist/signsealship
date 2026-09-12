@@ -144,6 +144,8 @@ maintainers:
   X-twitter: ''
   email: ''
 common:
+- type: Website
+  url: https://www.signsealship.com/
 - type: DeveloperPortal
   url: https://signsealship.com/developers
 - type: Documentation
