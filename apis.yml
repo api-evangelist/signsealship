@@ -26,6 +26,15 @@ created: '2026-08-31'
 modified: '2026-09-01'
 specificationVersion: '0.15'
 tags:
+- Notarization
+- Remote Online Notarization
+- Electronic Signature
+- Document Verification
+- Legal Technology
+- Real-Estate
+- Title and Escrow
+- Shipping
+tags_raw:
 - notarization
 - remote online notarization
 - electronic signature
@@ -35,90 +44,22 @@ tags:
 - title and escrow
 - shipping
 apis:
-- aid: signsealship.com:partner-api
-  name: SignSealShip Partner API
-  description: Create and track orders that combine e-signature, remote online notarization and tracked delivery. 35 documented
-    paths across Onboarding, Orders, Sandbox, Closing Rooms, Closing Passports, Proof Passport, Webhooks, and Launchpad &
-    Analytics. OpenAPI 3.1.0.
-  image: https://signsealship.com/brand/icon-512.png
-  humanURL: https://docs.signsealship.com
-  baseURL: https://signsealship.com
-  tags:
-  - notarization
-  - electronic signature
-  - document verification
-  - shipping
-  properties:
-  - type: Documentation
-    url: https://docs.signsealship.com
-  - type: OpenAPI
-    url: https://docs.signsealship.com/api-reference/openapi.json
-  - type: API Onboarding
-    url: https://signsealship.com/.well-known/api-onboarding.json
-  - type: Authentication
-    url: https://docs.signsealship.com/api-reference/authentication
-  - type: Webhooks
-    url: https://docs.signsealship.com/api-reference/webhooks
-    description: Repointed 2026-09-01. The previous target, https://signsealship.com/partner/webhooks, returns 200 but is
-      a dashboard route that client-side redirects to /login?next=%2Fpartner%2Fwebhooks -- it is a login wall, not a webhook
-      reference. The public reference is on the docs host (HTTP 200).
-  - type: Sandbox
-    url: https://docs.signsealship.com/api-reference/orders
-    description: Repointed 2026-09-01. The previous target, https://signsealship.com/partner/launchpad, is a login-gated dashboard
-      route. The sandbox is the /api/partner/sandbox/* order lifecycle documented on the public Order API reference; see sandbox/signsealship-sandbox.yml.
-  - type: MCPServer
-    url: https://sign-seal-ship.main-kill-isr.mintlify.me/mcp
-    description: Mintlify DOCUMENTATION-SEARCH MCP on a mintlify.me preview host -- not the Partner API and not a first-party
-      host. Answers initialize with 200. Declared in docs.signsealship.com/.well-known/mcp.json, which the provider apis.json
-      does not mention. Verified 2026-09-01.
-  - type: OpenAPI
-    url: openapi/signsealship-partner-api-openapi.yml
-    description: Harvested verbatim 2026-09-01 from https://docs.signsealship.com/api-reference/openapi.json (HTTP 200) and
-      byte-identical to the mirror at https://signsealship.com/openapi.json. OpenAPI 3.1.0, 35 paths / 39 operations. Original
-      JSON kept at openapi/_original/.
-  - type: Overlay
-    url: overlays/signsealship-partner-api-overlay.yaml
-    description: OpenAPI Overlay 1.0.0 with 11 non-destructive actions adding rate limits, error format, permission strings,
-      environment model, webhook topics, reversibility and domain standards to the upstream spec without mutating it.
-  - type: Authentication
-    url: authentication/signsealship-authentication.yml
-  - type: Sandbox
-    url: sandbox/signsealship-sandbox.yml
-  - type: Webhooks
-    url: asyncapi/signsealship-webhooks.yml
-  - type: MCPServer
-    url: mcp/signsealship-mcp.yml
-    description: 'Probed profile of the declared MCP server, including the required deployment block (mode: remote, auth:
-      none, verified: probed).'
-  - type: ToolCrosswalk
-    url: mcp/signsealship-tool-crosswalk.yml
-    description: 'MCP-to-REST crosswalk. Zero bound rows: the only MCP server is a documentation-search server, so all 39
-      OpenAPI operations sit in rest_only[].'
-  - type: ErrorCatalog
-    url: errors/signsealship-problem-types.yml
-  - type: DataModel
-    url: data-model/signsealship-data-model.yml
-  - type: RateLimits
-    url: rate-limits/signsealship-rate-limits.yml
-  - type: Conventions
-    url: conventions/signsealship-conventions.yml
-  - type: Idempotency
-    url: conventions/signsealship-conventions.yml
-    description: The contract declares an optional Idempotency-Key request header (components.parameters.IdempotencyKey, 8-255
-      chars) on POST /api/partner/orders and POST /api/partner/orders/{code}/checkout, with replay-the-original-response semantics.
-      Retention window is not published.
-  contact:
-  - FN: SignSealShip
-    url: https://signsealship.com/contact
 - aid: signsealship.com:ron-laws-dataset
   name: Remote online notarization requirements by U.S. jurisdiction
-  description: 'Statute-cited remote online notarization requirements for all 50 U.S. states and the District of Columbia:
-    effective date, notary fee cap, identity-verification standard, record-retention period, signer-location rule and document
-    exclusions. Every value carries its own primary-source citation. Published under CC BY 4.0 and archived at Zenodo (DOI
-    10.5281/zenodo.22213684). Values are reported as the cited sources state them and are not legal advice.'
+  description: >-
+    Statute-cited remote online notarization requirements for all 50 U.S. states and the District of Columbia:
+    effective date, notary fee cap, identity-verification standard, record-retention period, signer-location
+    rule and document exclusions. Every value carries its own primary-source citation. Published under
+    CC BY 4.0 and archived at Zenodo (DOI 10.5281/zenodo.22213684). Values are reported as the cited sources
+    state them and are not legal advice.
   humanURL: https://signsealship.com/ron-laws
   baseURL: https://signsealship.com
   tags:
+  - Open Data
+  - Remote Online Notarization
+  - state law
+  - Legal Reference
+  tags_raw:
   - open data
   - remote online notarization
   - state law
@@ -138,12 +79,325 @@ apis:
     url: https://signsealship.com/ron-laws#corrections
   - type: Repository
     url: https://zenodo.org/records/22213685
+- aid: signsealship:signsealship-closing-passports-api
+  name: SignSealShip Partner API Closing Passports API
+  description: Room-level, hash-chained, KMS-sealed evidence manifests.
+  humanURL: https://docs.signsealship.com
+  baseURL: https://signsealship.com
+  tags:
+  - Closing Passports
+  properties:
+  - type: OpenAPI
+    url: openapi/signsealship-closing-passports-api-openapi.yml
+  - type: Documentation
+    url: https://docs.signsealship.com
+  - type: API Onboarding
+    url: https://signsealship.com/.well-known/api-onboarding.json
+  - type: Authentication
+    url: https://docs.signsealship.com/api-reference/authentication
+  - type: Webhooks
+    url: https://docs.signsealship.com/api-reference/webhooks
+  - type: Sandbox
+    url: https://docs.signsealship.com/api-reference/orders
+  - type: Authentication
+    url: authentication/signsealship-authentication.yml
+  - type: Sandbox
+    url: sandbox/signsealship-sandbox.yml
+  - type: Webhooks
+    url: asyncapi/signsealship-webhooks.yml
+  - type: ToolCrosswalk
+    url: mcp/signsealship-tool-crosswalk.yml
+  - type: ErrorCatalog
+    url: errors/signsealship-problem-types.yml
+  - type: DataModel
+    url: data-model/signsealship-data-model.yml
+  - type: RateLimits
+    url: rate-limits/signsealship-rate-limits.yml
+  - type: Conventions
+    url: conventions/signsealship-conventions.yml
+  - type: Idempotency
+    url: conventions/signsealship-conventions.yml
+- aid: signsealship:signsealship-closing-rooms-api
+  name: SignSealShip Partner API Closing Rooms API
+  description: Verified Closing Rooms — one shareable page per transaction.
+  humanURL: https://docs.signsealship.com
+  baseURL: https://signsealship.com
+  tags:
+  - Closing Rooms
+  properties:
+  - type: OpenAPI
+    url: openapi/signsealship-closing-rooms-api-openapi.yml
+  - type: Documentation
+    url: https://docs.signsealship.com
+  - type: API Onboarding
+    url: https://signsealship.com/.well-known/api-onboarding.json
+  - type: Authentication
+    url: https://docs.signsealship.com/api-reference/authentication
+  - type: Webhooks
+    url: https://docs.signsealship.com/api-reference/webhooks
+  - type: Sandbox
+    url: https://docs.signsealship.com/api-reference/orders
+  - type: Authentication
+    url: authentication/signsealship-authentication.yml
+  - type: Sandbox
+    url: sandbox/signsealship-sandbox.yml
+  - type: Webhooks
+    url: asyncapi/signsealship-webhooks.yml
+  - type: ToolCrosswalk
+    url: mcp/signsealship-tool-crosswalk.yml
+  - type: ErrorCatalog
+    url: errors/signsealship-problem-types.yml
+  - type: DataModel
+    url: data-model/signsealship-data-model.yml
+  - type: RateLimits
+    url: rate-limits/signsealship-rate-limits.yml
+  - type: Conventions
+    url: conventions/signsealship-conventions.yml
+  - type: Idempotency
+    url: conventions/signsealship-conventions.yml
+- aid: signsealship:signsealship-launchpad-analytics-api
+  name: SignSealShip Partner API Launchpad & Analytics API
+  description: Your workspace's go-live checklist and tenant-scoped analytics.
+  humanURL: https://docs.signsealship.com
+  baseURL: https://signsealship.com
+  tags:
+  - Launchpad & Analytics
+  properties:
+  - type: OpenAPI
+    url: openapi/signsealship-launchpad-analytics-api-openapi.yml
+  - type: Documentation
+    url: https://docs.signsealship.com
+  - type: API Onboarding
+    url: https://signsealship.com/.well-known/api-onboarding.json
+  - type: Authentication
+    url: https://docs.signsealship.com/api-reference/authentication
+  - type: Webhooks
+    url: https://docs.signsealship.com/api-reference/webhooks
+  - type: Sandbox
+    url: https://docs.signsealship.com/api-reference/orders
+  - type: Authentication
+    url: authentication/signsealship-authentication.yml
+  - type: Sandbox
+    url: sandbox/signsealship-sandbox.yml
+  - type: Webhooks
+    url: asyncapi/signsealship-webhooks.yml
+  - type: ToolCrosswalk
+    url: mcp/signsealship-tool-crosswalk.yml
+  - type: ErrorCatalog
+    url: errors/signsealship-problem-types.yml
+  - type: DataModel
+    url: data-model/signsealship-data-model.yml
+  - type: RateLimits
+    url: rate-limits/signsealship-rate-limits.yml
+  - type: Conventions
+    url: conventions/signsealship-conventions.yml
+  - type: Idempotency
+    url: conventions/signsealship-conventions.yml
+- aid: signsealship:signsealship-onboarding-api
+  name: SignSealShip Partner API Onboarding API
+  description: Request partner API access.
+  humanURL: https://docs.signsealship.com
+  baseURL: https://signsealship.com
+  tags:
+  - Onboarding
+  properties:
+  - type: OpenAPI
+    url: openapi/signsealship-onboarding-api-openapi.yml
+  - type: Documentation
+    url: https://docs.signsealship.com
+  - type: API Onboarding
+    url: https://signsealship.com/.well-known/api-onboarding.json
+  - type: Authentication
+    url: https://docs.signsealship.com/api-reference/authentication
+  - type: Webhooks
+    url: https://docs.signsealship.com/api-reference/webhooks
+  - type: Sandbox
+    url: https://docs.signsealship.com/api-reference/orders
+  - type: Authentication
+    url: authentication/signsealship-authentication.yml
+  - type: Sandbox
+    url: sandbox/signsealship-sandbox.yml
+  - type: Webhooks
+    url: asyncapi/signsealship-webhooks.yml
+  - type: ToolCrosswalk
+    url: mcp/signsealship-tool-crosswalk.yml
+  - type: ErrorCatalog
+    url: errors/signsealship-problem-types.yml
+  - type: DataModel
+    url: data-model/signsealship-data-model.yml
+  - type: RateLimits
+    url: rate-limits/signsealship-rate-limits.yml
+  - type: Conventions
+    url: conventions/signsealship-conventions.yml
+  - type: Idempotency
+    url: conventions/signsealship-conventions.yml
+- aid: signsealship:signsealship-orders-api
+  name: SignSealShip Partner API Orders API
+  description: >-
+    B2B order intake — create sign / notarize / ship orders, track them, and mint Stripe hosted checkout.
+  humanURL: https://docs.signsealship.com
+  baseURL: https://signsealship.com
+  tags:
+  - Orders
+  properties:
+  - type: OpenAPI
+    url: openapi/signsealship-orders-api-openapi.yml
+  - type: Documentation
+    url: https://docs.signsealship.com
+  - type: API Onboarding
+    url: https://signsealship.com/.well-known/api-onboarding.json
+  - type: Authentication
+    url: https://docs.signsealship.com/api-reference/authentication
+  - type: Webhooks
+    url: https://docs.signsealship.com/api-reference/webhooks
+  - type: Sandbox
+    url: https://docs.signsealship.com/api-reference/orders
+  - type: Authentication
+    url: authentication/signsealship-authentication.yml
+  - type: Sandbox
+    url: sandbox/signsealship-sandbox.yml
+  - type: Webhooks
+    url: asyncapi/signsealship-webhooks.yml
+  - type: ToolCrosswalk
+    url: mcp/signsealship-tool-crosswalk.yml
+  - type: ErrorCatalog
+    url: errors/signsealship-problem-types.yml
+  - type: DataModel
+    url: data-model/signsealship-data-model.yml
+  - type: RateLimits
+    url: rate-limits/signsealship-rate-limits.yml
+  - type: Conventions
+    url: conventions/signsealship-conventions.yml
+  - type: Idempotency
+    url: conventions/signsealship-conventions.yml
+- aid: signsealship:signsealship-proof-passport-api
+  name: SignSealShip Partner API Proof Passport API
+  description: Seal and verify a single executed PDF.
+  humanURL: https://docs.signsealship.com
+  baseURL: https://signsealship.com
+  tags:
+  - Proof Passport
+  properties:
+  - type: OpenAPI
+    url: openapi/signsealship-proof-passport-api-openapi.yml
+  - type: Documentation
+    url: https://docs.signsealship.com
+  - type: API Onboarding
+    url: https://signsealship.com/.well-known/api-onboarding.json
+  - type: Authentication
+    url: https://docs.signsealship.com/api-reference/authentication
+  - type: Webhooks
+    url: https://docs.signsealship.com/api-reference/webhooks
+  - type: Sandbox
+    url: https://docs.signsealship.com/api-reference/orders
+  - type: Authentication
+    url: authentication/signsealship-authentication.yml
+  - type: Sandbox
+    url: sandbox/signsealship-sandbox.yml
+  - type: Webhooks
+    url: asyncapi/signsealship-webhooks.yml
+  - type: ToolCrosswalk
+    url: mcp/signsealship-tool-crosswalk.yml
+  - type: ErrorCatalog
+    url: errors/signsealship-problem-types.yml
+  - type: DataModel
+    url: data-model/signsealship-data-model.yml
+  - type: RateLimits
+    url: rate-limits/signsealship-rate-limits.yml
+  - type: Conventions
+    url: conventions/signsealship-conventions.yml
+  - type: Idempotency
+    url: conventions/signsealship-conventions.yml
+- aid: signsealship:signsealship-sandbox-api
+  name: SignSealShip Partner API Sandbox API
+  description: >-
+    Deterministic lifecycle simulation for TEST orders (sss_pk_test_ keys) — real state machine, real
+    signed webhooks, no live money.
+  humanURL: https://docs.signsealship.com
+  baseURL: https://signsealship.com
+  tags:
+  - Sandbox
+  properties:
+  - type: OpenAPI
+    url: openapi/signsealship-sandbox-api-openapi.yml
+  - type: Documentation
+    url: https://docs.signsealship.com
+  - type: API Onboarding
+    url: https://signsealship.com/.well-known/api-onboarding.json
+  - type: Authentication
+    url: https://docs.signsealship.com/api-reference/authentication
+  - type: Webhooks
+    url: https://docs.signsealship.com/api-reference/webhooks
+  - type: Sandbox
+    url: https://docs.signsealship.com/api-reference/orders
+  - type: Authentication
+    url: authentication/signsealship-authentication.yml
+  - type: Sandbox
+    url: sandbox/signsealship-sandbox.yml
+  - type: Webhooks
+    url: asyncapi/signsealship-webhooks.yml
+  - type: ToolCrosswalk
+    url: mcp/signsealship-tool-crosswalk.yml
+  - type: ErrorCatalog
+    url: errors/signsealship-problem-types.yml
+  - type: DataModel
+    url: data-model/signsealship-data-model.yml
+  - type: RateLimits
+    url: rate-limits/signsealship-rate-limits.yml
+  - type: Conventions
+    url: conventions/signsealship-conventions.yml
+  - type: Idempotency
+    url: conventions/signsealship-conventions.yml
+- aid: signsealship:signsealship-webhooks-api
+  name: SignSealShip Partner API Webhooks API
+  description: Signed event delivery and subscription management.
+  humanURL: https://docs.signsealship.com
+  baseURL: https://signsealship.com
+  tags:
+  - Webhooks
+  properties:
+  - type: OpenAPI
+    url: openapi/signsealship-webhooks-api-openapi.yml
+  - type: Documentation
+    url: https://docs.signsealship.com
+  - type: API Onboarding
+    url: https://signsealship.com/.well-known/api-onboarding.json
+  - type: Authentication
+    url: https://docs.signsealship.com/api-reference/authentication
+  - type: Webhooks
+    url: https://docs.signsealship.com/api-reference/webhooks
+  - type: Sandbox
+    url: https://docs.signsealship.com/api-reference/orders
+  - type: Authentication
+    url: authentication/signsealship-authentication.yml
+  - type: Sandbox
+    url: sandbox/signsealship-sandbox.yml
+  - type: Webhooks
+    url: asyncapi/signsealship-webhooks.yml
+  - type: ToolCrosswalk
+    url: mcp/signsealship-tool-crosswalk.yml
+  - type: ErrorCatalog
+    url: errors/signsealship-problem-types.yml
+  - type: DataModel
+    url: data-model/signsealship-data-model.yml
+  - type: RateLimits
+    url: rate-limits/signsealship-rate-limits.yml
+  - type: Conventions
+    url: conventions/signsealship-conventions.yml
+  - type: Idempotency
+    url: conventions/signsealship-conventions.yml
 maintainers:
 - FN: SignSealShip
   url: https://signsealship.com
   X-twitter: ''
   email: ''
 common:
+- type: MCPServer
+  url: https://sign-seal-ship.main-kill-isr.mintlify.me/mcp
+- type: Overlay
+  url: overlays/signsealship-partner-api-overlay.yaml
+- type: MCPServer
+  url: mcp/signsealship-mcp.yml
 - type: Website
   url: https://www.signsealship.com/
 - type: DeveloperPortal
