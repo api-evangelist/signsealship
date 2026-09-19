@@ -238,6 +238,8 @@ apis:
   humanURL: https://docs.signsealship.com
   baseURL: https://signsealship.com
   tags:
+  - Order
+  tags_raw:
   - Orders
   properties:
   - type: OpenAPI
@@ -354,6 +356,8 @@ apis:
   humanURL: https://docs.signsealship.com
   baseURL: https://signsealship.com
   tags:
+  - Webhook
+  tags_raw:
   - Webhooks
   properties:
   - type: OpenAPI
