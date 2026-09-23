@@ -1,0 +1,155 @@
+openapi: 3.2.0
+info:
+  title: SignSealShip Partner Launchpad & Analytics API
+  version: 1.0.0
+  description: 'The SignSealShip partner API: create sign / notarize / ship orders, create Verified Closing Rooms, seal Closing Passports and Proof Passports, and manage webhooks. Partner endpoints authenticate with a bearer key (`Authorization: Bearer sss_pk_...`); public verification endpoints need no key — possession of the verify, room, or order code is the authorization. See the Guides for full prose, rate limits, and signature verification.'
+  contact:
+    name: SignSealShip
+    url: https://signsealship.com/partner
+servers:
+- url: https://signsealship.com
+  description: Production
+security:
+- partnerKey: []
+tags:
+- name: Launchpad & Analytics
+  description: Your workspace's go-live checklist and tenant-scoped analytics.
+paths:
+  /api/partner/launchpad:
+    get:
+      tags:
+      - Launchpad & Analytics
+      summary: Go-live checklist
+      description: 'Your account''s activation state: the go-live checklist (each step with a deep link to complete it), the funnel of steps already reached, whether the account is ready for live keys, and the hours from signup to your first live order. Accepts the partner API key or the dashboard session.'
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      responses:
+        '200':
+          description: The activation state.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  partner:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      tier:
+                        type: string
+                  readyForLive:
+                    type: boolean
+                  completed:
+                    type: integer
+                  total:
+                    type: integer
+                  checklist:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        label:
+                          type: string
+                        done:
+                          type: boolean
+                        action:
+                          type: string
+                        deepLink:
+                          type: string
+                  funnel:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        step:
+                          type: string
+                        reached:
+                          type: boolean
+                        at:
+                          type:
+                          - string
+                          - 'null'
+                          format: date-time
+                  hoursToFirstLiveOrder:
+                    type:
+                    - number
+                    - 'null'
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      operationId: getApiPartnerLaunchpad
+      x-operation-id-source: derived
+  /api/partner/analytics:
+    get:
+      tags:
+      - Launchpad & Analytics
+      summary: Workspace analytics
+      description: 'A tenant-scoped analytics snapshot over a trailing window: monthly order volume, the created→paid→completed funnel, turnaround hours (median and p90), service mix, evidence coverage, and revenue. Accepts the partner API key (needs `orders:read`) or the dashboard session.'
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: days
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 366
+          default: 90
+        description: Trailing window in days.
+      responses:
+        '200':
+          description: The snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: windowDays, volumeByMonth[], funnel {created,paid,inProgress,completed,problem}, turnaroundHours {median,p90}, serviceMix {sign,notarize,ship,fax}, evidence, revenueCents, generatedAt.
+                properties:
+                  windowDays:
+                    type: integer
+                  generatedAt:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The API key lacks the `orders:read` scope.
+      operationId: getApiPartnerAnalytics
+      x-operation-id-source: derived
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+  responses:
+    Unauthorized:
+      description: Missing, malformed, revoked, or unknown partner key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: A valid partner API key is required.
+  securitySchemes:
+    partnerKey:
+      type: http
+      scheme: bearer
+      bearerFormat: sss_pk_...
+      description: 'Partner API key. Send as `Authorization: Bearer sss_pk_...`.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-session
+      description: SignSealShip dashboard login session cookie. Accepted by the `/api/partner/webhooks` management routes as an alternative to the partner key.

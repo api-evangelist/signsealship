@@ -1,0 +1,128 @@
+openapi: 3.2.0
+info:
+  title: SignSealShip Partner Onboarding API
+  version: 1.0.0
+  description: 'The SignSealShip partner API: create sign / notarize / ship orders, create Verified Closing Rooms, seal Closing Passports and Proof Passports, and manage webhooks. Partner endpoints authenticate with a bearer key (`Authorization: Bearer sss_pk_...`); public verification endpoints need no key — possession of the verify, room, or order code is the authorization. See the Guides for full prose, rate limits, and signature verification.'
+  contact:
+    name: SignSealShip
+    url: https://signsealship.com/partner
+servers:
+- url: https://signsealship.com
+  description: Production
+security:
+- partnerKey: []
+tags:
+- name: Onboarding
+  description: Request partner API access.
+paths:
+  /api/partner/request:
+    post:
+      tags:
+      - Onboarding
+      summary: Request partner access
+      description: Request a partner API key self-serve. Public; rate limited to 5 requests per hour per IP. A business-domain work email plus a coherent, on-topic use case is issued a trial key instantly (emailed once); everything else is queued for human review. Both outcomes return 200.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerRequest'
+            example:
+              firmName: Maple Title Co.
+              contactName: Dana Reyes
+              workEmail: dana@mapletitle.com
+              role: Escrow officer
+              expectedVolume: 15 closings/month
+              useCase: Create a Verified Closing Room per escrow file and share the live link with buyers, sellers, and lenders.
+      responses:
+        '200':
+          description: Request accepted (issued or pending).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerRequestResponse'
+              example:
+                status: issued
+                message: Your Closing Rooms access is ready — check your email.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          description: More than 5 requests in an hour from one IP.
+      operationId: postApiPartnerRequest
+      x-operation-id-source: derived
+components:
+  schemas:
+    PartnerRequest:
+      type: object
+      required:
+      - firmName
+      - contactName
+      - workEmail
+      properties:
+        firmName:
+          type: string
+          maxLength: 200
+          description: Your firm or company name.
+        contactName:
+          type: string
+          maxLength: 200
+          description: The requester's full name.
+        workEmail:
+          type: string
+          format: email
+          maxLength: 254
+          description: A deliverable work email. The issued key is sent here; a business domain is the strongest signal for instant issue.
+        role:
+          type: string
+          maxLength: 120
+          description: Your role at the firm (e.g. "Escrow officer").
+        expectedVolume:
+          type: string
+          maxLength: 120
+          description: Rough expected volume (e.g. "10-20 closings/month").
+        useCase:
+          type: string
+          maxLength: 4000
+          description: What you plan to build or run on the API.
+        recaptchaToken:
+          type: string
+          description: Optional bot-screening token; omit when calling the API directly.
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    PartnerRequestResponse:
+      type: object
+      required:
+      - status
+      - message
+      properties:
+        status:
+          type: string
+          enum:
+          - issued
+          - pending
+          description: '`issued` — a trial key was created and emailed. `pending` — queued for human review.'
+        message:
+          type: string
+          description: A browser-safe confirmation message.
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  securitySchemes:
+    partnerKey:
+      type: http
+      scheme: bearer
+      bearerFormat: sss_pk_...
+      description: 'Partner API key. Send as `Authorization: Bearer sss_pk_...`.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-session
+      description: SignSealShip dashboard login session cookie. Accepted by the `/api/partner/webhooks` management routes as an alternative to the partner key.

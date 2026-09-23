@@ -1,0 +1,624 @@
+openapi: 3.2.0
+info:
+  title: SignSealShip Partner Webhooks API
+  version: 1.0.0
+  description: 'The SignSealShip partner API: create sign / notarize / ship orders, create Verified Closing Rooms, seal Closing Passports and Proof Passports, and manage webhooks. Partner endpoints authenticate with a bearer key (`Authorization: Bearer sss_pk_...`); public verification endpoints need no key — possession of the verify, room, or order code is the authorization. See the Guides for full prose, rate limits, and signature verification.'
+  contact:
+    name: SignSealShip
+    url: https://signsealship.com/partner
+servers:
+- url: https://signsealship.com
+  description: Production
+security:
+- partnerKey: []
+tags:
+- name: Webhooks
+  description: Signed event delivery and subscription management.
+paths:
+  /api/passport/webhooks:
+    post:
+      tags:
+      - Webhooks
+      summary: Register a passport webhook
+      description: Register an https endpoint for `passport.sealed` events using your partner API key. The signing secret is returned exactly once — only its hash is stored. Subscriptions created this way receive only `passport.sealed` (no room events).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: Your https webhook endpoint.
+            example:
+              url: https://example.com/hooks/signsealship
+      responses:
+        '200':
+          description: Webhook registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassportWebhookResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      operationId: postApiPassportWebhooks
+      x-operation-id-source: derived
+  /api/passport/webhooks/{id}:
+    delete:
+      tags:
+      - Webhooks
+      summary: Delete a passport webhook
+      description: 'Unregister a subscription created by `POST /api/passport/webhooks`, using your partner API key. Partner-scoped: another partner''s id and an unknown id return the identical 404.'
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The `webhookId` returned at registration.
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: boolean
+                  webhookId:
+                    type: string
+                    format: uuid
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Unknown id — or another partner's subscription; the two are indistinguishable.
+      operationId: deleteApiPassportWebhooksById
+      x-operation-id-source: derived
+  /api/partner/webhooks:
+    get:
+      tags:
+      - Webhooks
+      summary: List subscriptions
+      description: 'List your partner''s webhook subscriptions, newest first. Accepts your partner API key (`Authorization: Bearer sss_pk_...`) for server-to-server management, or the SignSealShip dashboard session cookie (`__Host-session`) — link a session once with a partner key at https://signsealship.com/partner.'
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      responses:
+        '200':
+          description: Your subscriptions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WebhookSubscription'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Session not linked to a partner.
+      operationId: getApiPartnerWebhooks
+      x-operation-id-source: derived
+    post:
+      tags:
+      - Webhooks
+      summary: Create a subscription
+      description: Create a topic-aware webhook subscription. Accepts the partner API key or the dashboard session cookie. The signing secret is shown exactly once. Order topics (`order.created`, `payment.cleared`, `signature.completed`, `shipment.delivered`) deliver only for orders you created through the Order API.
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWebhookRequest'
+            example:
+              url: https://example.com/hooks/signsealship
+              topics:
+              - order.created
+              - payment.cleared
+              - room.passport_sealed
+      responses:
+        '200':
+          description: Subscription created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateWebhookResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Session not linked to a partner.
+      operationId: postApiPartnerWebhooks
+      x-operation-id-source: derived
+  /api/partner/webhooks/{id}:
+    delete:
+      tags:
+      - Webhooks
+      summary: Delete a subscription
+      description: Delete a subscription. Accepts the partner API key or the dashboard session cookie.
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The subscription id.
+      responses:
+        '200':
+          description: Deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Session not linked to a partner.
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: deleteApiPartnerWebhooksById
+      x-operation-id-source: derived
+  /api/partner/webhooks/{id}/rotate:
+    post:
+      tags:
+      - Webhooks
+      summary: Rotate a signing secret
+      description: Reissue the subscription's signing secret. The new secret is returned exactly once — only its hash is stored. For 24 hours deliveries are signed with both the old and the new secret (one `v1` entry each in the `SignSealShip-Signature` header), so your endpoint can cut over without dropping verification; after the overlap the old secret stops signing. Accepts the partner API key or the dashboard session cookie.
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The subscription id.
+      responses:
+        '200':
+          description: New secret issued — shown exactly once.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RotateWebhookResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Session not linked to a partner.
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: postApiPartnerWebhooksByIdRotate
+      x-operation-id-source: derived
+  /api/partner/webhooks/{id}/deliveries:
+    get:
+      tags:
+      - Webhooks
+      summary: List delivery attempts
+      description: A metadata-only feed of the subscription's recent delivery attempts — what was attempted, when, and how your endpoint answered. Event payload bodies are never stored or returned. Accepts the partner API key or the dashboard session cookie.
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The subscription id.
+      responses:
+        '200':
+          description: Delivery attempt metadata, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - deliveries
+                properties:
+                  deliveries:
+                    type: array
+                    items:
+                      type: object
+                      description: One delivery attempt's metadata (never the payload body).
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Session not linked to a partner.
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: getApiPartnerWebhooksByIdDeliveries
+      x-operation-id-source: derived
+  /api/partner/webhooks/deliveries:
+    get:
+      tags:
+      - Webhooks
+      summary: Inspect deliveries across subscriptions
+      description: The delivery feed across ALL of your subscriptions, filterable. Metadata only — payload bodies are redacted. Accepts the partner API key (needs `webhooks:read`) or the dashboard session.
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+      - name: topic
+        in: query
+        schema:
+          type: string
+        description: Filter to one event topic.
+      - name: order
+        in: query
+        schema:
+          type: string
+        description: Filter to one order's public code.
+      - name: external_reference
+        in: query
+        schema:
+          type: string
+        description: Filter to orders created with this reference.
+      - name: status
+        in: query
+        schema:
+          type: string
+        description: Filter by delivery state (e.g. `delivered`, `failed`, `retrying`).
+      responses:
+        '200':
+          description: Matching deliveries, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - deliveries
+                properties:
+                  deliveries:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        deliveryId:
+                          type: string
+                        eventName:
+                          type: string
+                        state:
+                          type: string
+                        attempts:
+                          type: integer
+                        lastStatusCode:
+                          type:
+                          - integer
+                          - 'null'
+                        nextAttemptAt:
+                          type:
+                          - string
+                          - 'null'
+                          format: date-time
+                        destinationUrl:
+                          type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Session not linked to a partner, or the key lacks `webhooks:read`.
+      operationId: getApiPartnerWebhooksDeliveries
+      x-operation-id-source: derived
+  /api/partner/webhooks/deliveries/{deliveryId}:
+    get:
+      tags:
+      - Webhooks
+      summary: Inspect one delivery
+      description: 'One delivery''s detail: the redacted request body, the signature header name, and the full attempt history (status codes, timing). Accepts the partner API key (needs `webhooks:read`) or the dashboard session.'
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: deliveryId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The delivery id from a delivery list.
+      responses:
+        '200':
+          description: The delivery detail (payload redacted).
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Delivery metadata, redacted body preview, and attempt history.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: getApiPartnerWebhooksDeliveriesByDeliveryId
+      x-operation-id-source: derived
+  /api/partner/webhooks/{id}/test:
+    post:
+      tags:
+      - Webhooks
+      summary: Send a signed test event
+      description: Deliver a signed synthetic event to the subscription's endpoint right now — the fastest way to prove your signature verification end to end. Requires `webhooks:write` (or the dashboard session).
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The subscription id.
+      responses:
+        '200':
+          description: Test event queued/delivered.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  deliveryId:
+                    type: string
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: postApiPartnerWebhooksByIdTest
+      x-operation-id-source: derived
+  /api/partner/webhooks/deliveries/{deliveryId}/replay:
+    post:
+      tags:
+      - Webhooks
+      summary: Replay a delivery
+      description: Re-send a past delivery's event as a brand-new signed delivery to the same subscription. Requires `webhooks:write` (or the dashboard session).
+      security:
+      - partnerKey: []
+      - sessionCookie: []
+      parameters:
+      - name: deliveryId
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The delivery id to replay.
+      responses:
+        '200':
+          description: A new delivery was created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  deliveryId:
+                    type: string
+                    description: The NEW delivery's id.
+                  replayedFrom:
+                    type: string
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No such delivery, or its endpoint was deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: postApiPartnerWebhooksDeliveriesByDeliveryIdReplay
+      x-operation-id-source: derived
+  /api/partner/webhooks/signature-example:
+    get:
+      tags:
+      - Webhooks
+      summary: Signature verification recipe
+      description: The signature header name and a worked verification example (Node.js). Deliberately public — a static docs recipe with no tenant data, readable before you hold a key.
+      security: []
+      responses:
+        '200':
+          description: The recipe.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signatureHeader:
+                    type: string
+                  example:
+                    type: string
+                  requestId:
+                    type: string
+      operationId: getApiPartnerWebhooksSignatureExample
+      x-operation-id-source: derived
+components:
+  schemas:
+    CreateWebhookRequest:
+      type: object
+      required:
+      - url
+      - topics
+      properties:
+        url:
+          type: string
+          format: uri
+          description: An absolute https:// URL.
+        topics:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            enum:
+            - passport.sealed
+            - room.order_attached
+            - room.passport_sealed
+            - order.created
+            - payment.cleared
+            - signature.completed
+            - shipment.delivered
+            - trust.assessment_requested
+            - trust.assessment_completed
+            - trust.assessment_superseded
+            - recording.review_required
+            - recording.quote_ready
+            - recording.approved
+            - recording.fulfillment_queued
+            - recording.mailed
+            - recording.delivered_to_recorder
+            - recording.accepted
+            - recording.recorded
+            - recording.rejected
+            - recording.receipt_sealed
+          description: The order topics deliver only for orders created through the Order API.
+    WebhookSubscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        topics:
+          type: array
+          items:
+            type: string
+            enum:
+            - passport.sealed
+            - room.order_attached
+            - room.passport_sealed
+            - order.created
+            - payment.cleared
+            - signature.completed
+            - shipment.delivered
+            - trust.assessment_requested
+            - trust.assessment_completed
+            - trust.assessment_superseded
+            - recording.review_required
+            - recording.quote_ready
+            - recording.approved
+            - recording.fulfillment_queued
+            - recording.mailed
+            - recording.delivered_to_recorder
+            - recording.accepted
+            - recording.recorded
+            - recording.rejected
+            - recording.receipt_sealed
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+    PassportWebhookResponse:
+      type: object
+      properties:
+        webhookId:
+          type: string
+          format: uuid
+        url:
+          type: string
+        signingSecret:
+          type: string
+          description: Shown exactly once — store it now. Only its hash is kept.
+        signatureHeader:
+          type: string
+          example: SignSealShip-Signature
+        verification:
+          type: string
+          description: How to verify the HMAC signature.
+    CreateWebhookResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        secret:
+          type: string
+          description: Signing secret prefixed `sss_whsec_`. Shown exactly once.
+        url:
+          type: string
+        topics:
+          type: array
+          items:
+            type: string
+        signatureHeader:
+          type: string
+          example: SignSealShip-Signature
+    RotateWebhookResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The rotated subscription id.
+        secret:
+          type: string
+          description: The new signing secret, prefixed `sss_whsec_`. Shown exactly once — only its hash is stored. Deliveries are signed with both the old and the new secret for 24 hours, then the old secret stops signing.
+        signatureHeader:
+          type: string
+          description: Header name carrying the HMAC signature on every delivery.
+        previousSecretExpiresAt:
+          type: string
+          format: date-time
+          description: Until this instant deliveries are signed with BOTH secrets — accept either during the overlap.
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing, malformed, revoked, or unknown partner key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: A valid partner API key is required.
+    NotFound:
+      description: Not found. Unknown codes read as a generic not-found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  securitySchemes:
+    partnerKey:
+      type: http
+      scheme: bearer
+      bearerFormat: sss_pk_...
+      description: 'Partner API key. Send as `Authorization: Bearer sss_pk_...`.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-session
+      description: SignSealShip dashboard login session cookie. Accepted by the `/api/partner/webhooks` management routes as an alternative to the partner key.

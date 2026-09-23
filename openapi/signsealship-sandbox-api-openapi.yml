@@ -1,0 +1,178 @@
+openapi: 3.2.0
+info:
+  title: SignSealShip Partner Sandbox API
+  version: 1.0.0
+  description: 'The SignSealShip partner API: create sign / notarize / ship orders, create Verified Closing Rooms, seal Closing Passports and Proof Passports, and manage webhooks. Partner endpoints authenticate with a bearer key (`Authorization: Bearer sss_pk_...`); public verification endpoints need no key — possession of the verify, room, or order code is the authorization. See the Guides for full prose, rate limits, and signature verification.'
+  contact:
+    name: SignSealShip
+    url: https://signsealship.com/partner
+servers:
+- url: https://signsealship.com
+  description: Production
+security:
+- partnerKey: []
+tags:
+- name: Sandbox
+  description: Deterministic lifecycle simulation for TEST orders (sss_pk_test_ keys) — real state machine, real signed webhooks, no live money.
+paths:
+  /api/partner/sandbox/orders/{code}/checkout:
+    post:
+      tags:
+      - Sandbox
+      summary: Simulate a checkout outcome
+      description: Deterministically simulate the payment outcome for a TEST order (created with a `sss_pk_test_` key). `success` finishes the payment crossing exactly like the verified Stripe webhook — the order lands in its first purchased segment and the `payment.cleared` webhook fires with real HMAC signing; a replayed success is a no-op. `decline` parks the order at PaymentFailed (retry with a later success), `cancel`/`delayed` park it at AwaitingPayment. No real Stripe session is ever minted for a test order. Requires `orders:write`; a LIVE order here is a 409.
+      parameters:
+      - $ref: '#/components/parameters/OrderCode'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                outcome:
+                  type: string
+                  enum:
+                  - success
+                  - decline
+                  - cancel
+                  - delayed
+                  default: success
+            example:
+              outcome: success
+      responses:
+        '200':
+          description: The simulated outcome was applied.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderCode:
+                    type: string
+                  outcome:
+                    type: string
+                  checkoutUrl:
+                    type: string
+                    description: A sandbox checkout link — no real payment page.
+                  status:
+                    type: string
+                    description: The order's status after the simulation.
+                  firedEvents:
+                    type: array
+                    items:
+                      type: string
+                    description: Webhook milestones this call fired (real signed deliveries).
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Unknown code — or another partner's order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Not a test order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: postApiPartnerSandboxOrdersByCodeCheckout
+      x-operation-id-source: derived
+  /api/partner/sandbox/orders/{code}/advance:
+    post:
+      tags:
+      - Sandbox
+      summary: Advance a test order one milestone
+      description: Walk a TEST order forward along the happy path until the next lifecycle milestone fires — `payment.cleared`, `signature.completed`, or `shipment.delivered` — delivering the real signed webhook for it. Omit `event` (or send null) to cross whichever milestone is next; name one to walk to it. A milestone the order's purchased services can never reach is a 409. Requires `orders:write`.
+      parameters:
+      - $ref: '#/components/parameters/OrderCode'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event:
+                  type:
+                  - string
+                  - 'null'
+                  enum:
+                  - payment.cleared
+                  - signature.completed
+                  - shipment.delivered
+                  - null
+            example:
+              event: signature.completed
+      responses:
+        '200':
+          description: The order advanced.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderCode:
+                    type: string
+                  status:
+                    type: string
+                  firedEvents:
+                    type: array
+                    items:
+                      type: string
+                  requestId:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Unknown code — or another partner's order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Not a test order, or the milestone does not apply to the purchased services.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: postApiPartnerSandboxOrdersByCodeAdvance
+      x-operation-id-source: derived
+components:
+  responses:
+    Unauthorized:
+      description: Missing, malformed, revoked, or unknown partner key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: A valid partner API key is required.
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+  parameters:
+    OrderCode:
+      name: code
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The order's public code from the create response.
+  securitySchemes:
+    partnerKey:
+      type: http
+      scheme: bearer
+      bearerFormat: sss_pk_...
+      description: 'Partner API key. Send as `Authorization: Bearer sss_pk_...`.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-session
+      description: SignSealShip dashboard login session cookie. Accepted by the `/api/partner/webhooks` management routes as an alternative to the partner key.

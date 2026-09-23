@@ -1,0 +1,215 @@
+openapi: 3.2.0
+info:
+  title: SignSealShip Partner Closing Passports API
+  version: 1.0.0
+  description: 'The SignSealShip partner API: create sign / notarize / ship orders, create Verified Closing Rooms, seal Closing Passports and Proof Passports, and manage webhooks. Partner endpoints authenticate with a bearer key (`Authorization: Bearer sss_pk_...`); public verification endpoints need no key — possession of the verify, room, or order code is the authorization. See the Guides for full prose, rate limits, and signature verification.'
+  contact:
+    name: SignSealShip
+    url: https://signsealship.com/partner
+servers:
+- url: https://signsealship.com
+  description: Production
+security:
+- partnerKey: []
+tags:
+- name: Closing Passports
+  description: Room-level, hash-chained, KMS-sealed evidence manifests.
+paths:
+  /api/rooms/{roomCode}/passport:
+    post:
+      tags:
+      - Closing Passports
+      summary: Seal a passport version
+      description: Mint the next Closing Passport version for a room — a dated, hash-chained, KMS-sealed snapshot, never an overwrite. Capped at 20 versions per room. Requires your partner key; the room must be yours.
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      responses:
+        '200':
+          description: Passport version sealed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PassportSealResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: postApiRoomsByRoomCodePassport
+      x-operation-id-source: derived
+  /api/verify/room/{verifyCode}:
+    get:
+      tags:
+      - Closing Passports
+      summary: Verify a passport (public)
+      description: 'Public verification of a Closing Passport version. `chainOk` is recomputed on every call, never a stored verdict. Malformed and unknown codes return the identical generic 404 `{"verdict": "unknown"}`.'
+      security: []
+      parameters:
+      - name: verifyCode
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The passport's 26-character verification code.
+      responses:
+        '200':
+          description: The verified passport version and its recomputed chain state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomPassportVerification'
+        '404':
+          description: Unknown or malformed code.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verdict:
+                    type: string
+                    example: unknown
+      operationId: getApiVerifyRoomByVerifyCode
+      x-operation-id-source: derived
+  /api/verify/room/{verifyCode}/pdf:
+    get:
+      tags:
+      - Closing Passports
+      summary: Download the sealed certificate (public)
+      description: Streams the sealed Closing Passport certificate PDF. The verify code is the bearer.
+      security: []
+      parameters:
+      - name: verifyCode
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The sealed certificate PDF.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Unknown code or unavailable artifact.
+      operationId: getApiVerifyRoomByVerifyCodePdf
+      x-operation-id-source: derived
+components:
+  schemas:
+    Branding:
+      type:
+      - object
+      - 'null'
+      properties:
+        brandName:
+          type:
+          - string
+          - 'null'
+        accentColor:
+          type:
+          - string
+          - 'null'
+          description: Hex color like `#1a2b3c`.
+        logoUrl:
+          type:
+          - string
+          - 'null'
+          description: Public https URL of the partner's logo.
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    RoomPassportVerification:
+      type: object
+      properties:
+        manifest:
+          type: object
+          description: The stored canonical manifest, parsed (coverage, documents, passport).
+        manifestSha256:
+          type: string
+        sealedSha256:
+          type: string
+        version:
+          type: integer
+        prevManifestSha256:
+          type:
+          - string
+          - 'null'
+        chainOk:
+          type: boolean
+          description: 'Recomputed every call: the stored manifest re-hashes to manifestSha256 AND the chain link is intact.'
+        branding:
+          $ref: '#/components/schemas/Branding'
+        createdAt:
+          type: string
+          format: date-time
+        downloadUrl:
+          type: string
+          description: '`/api/verify/room/{verifyCode}/pdf`.'
+    PassportSealResponse:
+      type: object
+      properties:
+        version:
+          type: integer
+          description: The new version number, incrementing per room.
+        verifyCode:
+          type: string
+          description: 26 lowercase base32 characters (128 bits).
+        verifyUrl:
+          type: string
+          description: '`/v/room/{verifyCode}`.'
+        manifestSha256:
+          type: string
+        prevManifestSha256:
+          type:
+          - string
+          - 'null'
+          description: The prior version's manifestSha256 — the hash-chain link. `null` on version 1.
+        sealedSha256:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing, malformed, revoked, or unknown partner key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: A valid partner API key is required.
+    NotFound:
+      description: Not found. Unknown codes read as a generic not-found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  parameters:
+    RoomCode:
+      name: roomCode
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The room's bearer code (40 lowercase hex characters; the read endpoint accepts 24–64).
+  securitySchemes:
+    partnerKey:
+      type: http
+      scheme: bearer
+      bearerFormat: sss_pk_...
+      description: 'Partner API key. Send as `Authorization: Bearer sss_pk_...`.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-session
+      description: SignSealShip dashboard login session cookie. Accepted by the `/api/partner/webhooks` management routes as an alternative to the partner key.

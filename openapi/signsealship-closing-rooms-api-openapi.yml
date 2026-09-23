@@ -1,0 +1,691 @@
+openapi: 3.2.0
+info:
+  title: SignSealShip Partner Closing Rooms API
+  version: 1.0.0
+  description: 'The SignSealShip partner API: create sign / notarize / ship orders, create Verified Closing Rooms, seal Closing Passports and Proof Passports, and manage webhooks. Partner endpoints authenticate with a bearer key (`Authorization: Bearer sss_pk_...`); public verification endpoints need no key — possession of the verify, room, or order code is the authorization. See the Guides for full prose, rate limits, and signature verification.'
+  contact:
+    name: SignSealShip
+    url: https://signsealship.com/partner
+servers:
+- url: https://signsealship.com
+  description: Production
+security:
+- partnerKey: []
+tags:
+- name: Closing Rooms
+  description: Verified Closing Rooms — one shareable page per transaction.
+paths:
+  /api/rooms:
+    post:
+      tags:
+      - Closing Rooms
+      summary: Create a room
+      description: 'Create a Verified Closing Room. Enforces your tier''s active-room quota (trial and PartnerLink: 5 open rooms; ProOffice: 25; ClosingDesk: unlimited).'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRoomRequest'
+            example:
+              name: 1428 Maple St — Refinance
+              reference: TC-88412
+      responses:
+        '200':
+          description: Room created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateRoomResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      operationId: postApiRooms
+      x-operation-id-source: derived
+    get:
+      tags:
+      - Closing Rooms
+      summary: List your rooms
+      description: Returns your own rooms only, newest first.
+      responses:
+        '200':
+          description: Your rooms.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rooms:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RoomSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      operationId: getApiRooms
+      x-operation-id-source: derived
+  /api/rooms/{roomCode}:
+    get:
+      tags:
+      - Closing Rooms
+      summary: Read the room (public)
+      description: 'Public read by possession of the room code — no API key. The same live JSON the room page renders. Codes outside the 24–64 character gate and unknown codes both return an empty 404. Responses are `Cache-Control: no-store`.'
+      security: []
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      responses:
+        '200':
+          description: The live room view.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomView'
+        '404':
+          description: Unknown or malformed room code.
+      operationId: getApiRoomsByRoomCode
+      x-operation-id-source: derived
+  /api/rooms/{roomCode}/orders:
+    post:
+      tags:
+      - Closing Rooms
+      summary: Attach an order
+      description: 'Attach an order to a room. Authorization is possession of the order''s public code. Idempotent — re-attaching succeeds with `alreadyAttached: true`. A room holds at most 50 orders.'
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttachOrderRequest'
+            example:
+              orderCode: the-orders-public-code
+              label: Seller deed package
+      responses:
+        '200':
+          description: Attached (or already attached).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  alreadyAttached:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: postApiRoomsByRoomCodeOrders
+      x-operation-id-source: derived
+  /api/rooms/{roomCode}/orders/{orderCode}:
+    delete:
+      tags:
+      - Closing Rooms
+      summary: Detach an order
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      - name: orderCode
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The attached order's public code.
+      responses:
+        '200':
+          description: Detached.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: deleteApiRoomsByRoomCodeOrdersByOrderCode
+      x-operation-id-source: derived
+  /api/rooms/{roomCode}/rotate:
+    post:
+      tags:
+      - Closing Rooms
+      summary: Rotate the room link
+      description: Reissue the room's bearer code. Every previously shared link dies instantly — the mitigation for a leaked or over-shared link.
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      responses:
+        '200':
+          description: New code issued.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  roomCode:
+                    type: string
+                  roomUrl:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: postApiRoomsByRoomCodeRotate
+      x-operation-id-source: derived
+  /api/rooms/{roomCode}/participants:
+    get:
+      tags:
+      - Closing Rooms
+      summary: List the people on a closing
+      description: The roster for one of YOUR rooms, with real email addresses. The public room view (`GET /api/rooms/{roomCode}`) returns the same people with masked emails, because the room link is a bearer key.
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      responses:
+        '200':
+          description: The live roster. Removed participants are excluded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  participants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RoomParticipant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: getApiRoomsByRoomCodeParticipants
+      x-operation-id-source: derived
+    post:
+      tags:
+      - Closing Rooms
+      summary: Add a person to a closing
+      description: 'Record who this transaction involves — the buyer, the seller, the loan officer.
+
+
+        **This grants no access.** A participant is a name and an email; the room is still reached by possession of its link, and removing someone here does not revoke a link they already hold (rotate the room code for that).
+
+
+        Idempotent on a live email address (case-insensitive): re-adding someone already on the deal succeeds with `alreadyPresent: true`. A room holds at most 25 participants.'
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddParticipantRequest'
+            example:
+              name: Dana Buyer
+              email: dana@example.com
+              role: client
+      responses:
+        '200':
+          description: Added (or already present).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  alreadyPresent:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: postApiRoomsByRoomCodeParticipants
+      x-operation-id-source: derived
+  /api/rooms/{roomCode}/participants/{participantId}:
+    delete:
+      tags:
+      - Closing Rooms
+      summary: Remove a person from a closing
+      description: Takes someone off the live roster. The underlying row is retained — who was on a deal at the time a document was executed is part of the record, not a mutable list — so this is not a deletion of history. Re-adding the same person later creates a new entry.
+      parameters:
+      - $ref: '#/components/parameters/RoomCode'
+      - name: participantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The participant's id, from the list response.
+      responses:
+        '200':
+          description: Removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: deleteApiRoomsByRoomCodeParticipantsByParticipantId
+      x-operation-id-source: derived
+  /api/calls/{code}/join:
+    post:
+      tags:
+      - Closing Rooms
+      summary: Join a closing call
+      description: 'Redeems a party''s call invite.
+
+
+        The code is a bearer capability for **calls only** — it never returns the room view, the orders, or any document, and it is **inert unless a call is actually running**. A `live: false` response means the link is genuine but the firm has not started the call yet; a `404` covers wrong, expired, and revoked codes alike, so probing codes reveals nothing.
+
+
+        Calls are **not recorded**. No recording, transcript, or sealed artifact is produced.
+
+
+        Invites are issued from the partner dashboard (session-authenticated); there is no partner-API-key route for starting a call.'
+      security: []
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The invite code from the join link.
+      responses:
+        '200':
+          description: Either LiveKit credentials, or an honest not-started answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallJoinResponse'
+        '404':
+          description: Unknown, expired, or revoked invite — deliberately indistinguishable.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    enum:
+                    - invite_not_found
+        '503':
+          description: Calling is not configured on this deployment.
+      operationId: postApiCallsByCodeJoin
+      x-operation-id-source: derived
+components:
+  schemas:
+    CreateRoomRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Display name shown to every party (e.g. a property address).
+        reference:
+          type: string
+          maxLength: 200
+          description: Your internal file number.
+    ActivityItem:
+      type: object
+      properties:
+        orderCode:
+          type: string
+        action:
+          type: string
+          enum:
+          - order.created
+          - order.transition
+          - order.claimed
+          - order.cancelled
+          - signing_link.issued
+          - room.order_attached
+        fromStatus:
+          type:
+          - string
+          - 'null'
+        toStatus:
+          type:
+          - string
+          - 'null'
+        occurredAt:
+          type: string
+          format: date-time
+    Branding:
+      type:
+      - object
+      - 'null'
+      properties:
+        brandName:
+          type:
+          - string
+          - 'null'
+        accentColor:
+          type:
+          - string
+          - 'null'
+          description: Hex color like `#1a2b3c`.
+        logoUrl:
+          type:
+          - string
+          - 'null'
+          description: Public https URL of the partner's logo.
+    RoomView:
+      type: object
+      properties:
+        roomCode:
+          type: string
+        name:
+          type: string
+        reference:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          example: open
+        partnerName:
+          type: string
+        branding:
+          $ref: '#/components/schemas/Branding'
+        progress:
+          type: object
+          properties:
+            total:
+              type: integer
+            signed:
+              type: integer
+            sealed:
+              type: integer
+            delivered:
+              type: integer
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomOrderCard'
+        activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityItem'
+        passport:
+          $ref: '#/components/schemas/RoomPassportInfo'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    RoomParticipant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+          description: The real address. The PUBLIC room view masks this; only the owning partner reads it unmasked here.
+        role:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+    CreateRoomResponse:
+      type: object
+      properties:
+        roomCode:
+          type: string
+          description: The room's bearer code — 40 lowercase hex characters.
+        roomUrl:
+          type: string
+          description: Root-relative path to the shareable page, `/rooms/{roomCode}`.
+        name:
+          type: string
+        reference:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          example: open
+        createdAt:
+          type: string
+          format: date-time
+    RoomOrderCard:
+      type: object
+      properties:
+        orderCode:
+          type: string
+        label:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          description: Raw platform status (e.g. `EsignPending`). Build logic on `statusGroup`.
+        statusGroup:
+          type: string
+          enum:
+          - signing
+          - signed
+          - notarizing
+          - notarized
+          - shipping
+          - shipped
+          - delivered
+          - complete
+          - attention
+          - open
+        services:
+          type: object
+          properties:
+            sign:
+              type: boolean
+            notarize:
+              type: boolean
+            ship:
+              type: boolean
+            fax:
+              type: boolean
+        signers:
+          type: array
+          items:
+            type: object
+            properties:
+              email:
+                type: string
+                description: Masked email.
+              name:
+                type:
+                - string
+                - 'null'
+              routingOrder:
+                type: integer
+              signed:
+                type: boolean
+        evidenceBadge:
+          type: string
+          enum:
+          - sealed
+          - recorded
+          - none
+          description: 'Locked vocabulary: `sealed` (verifiable artifact hash on record), `recorded` (platform attestation only), `none` (no evidence yet).'
+        verifyCode:
+          type:
+          - string
+          - 'null'
+          description: Present only when the badge is `sealed` and the envelope verify code exists.
+        trackingNumber:
+          type:
+          - string
+          - 'null'
+        carrier:
+          type:
+          - string
+          - 'null'
+        attachedAt:
+          type: string
+          format: date-time
+    RoomSummary:
+      type: object
+      properties:
+        roomCode:
+          type: string
+        name:
+          type: string
+        reference:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          example: open
+        orderCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    RoomPassportInfo:
+      type:
+      - object
+      - 'null'
+      properties:
+        version:
+          type: integer
+        verifyCode:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    AttachOrderRequest:
+      type: object
+      required:
+      - orderCode
+      properties:
+        orderCode:
+          type: string
+          minLength: 24
+          maxLength: 64
+          description: The order's public code.
+        label:
+          type: string
+          description: A display label for the document card.
+    CallJoinResponse:
+      oneOf:
+      - type: object
+        title: Call is live
+        properties:
+          live:
+            type: boolean
+            enum:
+            - true
+          url:
+            type: string
+            description: LiveKit websocket URL.
+          token:
+            type: string
+            description: Short-lived LiveKit access token for this party.
+          room:
+            type: string
+            description: LiveKit room name, derived server-side from the closing.
+          displayName:
+            type: string
+            description: What the other participants see.
+          roomName:
+            type: string
+            description: The closing's name.
+          startedAt:
+            type: string
+            format: date-time
+      - type: object
+        title: Call has not started
+        properties:
+          live:
+            type: boolean
+            enum:
+            - false
+          roomName:
+            type: string
+          message:
+            type: string
+    AddParticipantRequest:
+      type: object
+      required:
+      - name
+      - email
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          description: The person's display name, as you'd write it on the file.
+        email:
+          type: string
+          format: email
+          maxLength: 320
+          description: Where you would reach them. Stored lowercased; per-room uniqueness is case-insensitive.
+        role:
+          type: string
+          maxLength: 40
+          default: client
+          description: Their part in the deal — client, signer, agent, lender, attorney, title_officer, observer, or anything else you use. Descriptive only; it grants no authorization.
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing, malformed, revoked, or unknown partner key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: A valid partner API key is required.
+    NotFound:
+      description: Not found. Unknown codes read as a generic not-found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  parameters:
+    RoomCode:
+      name: roomCode
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The room's bearer code (40 lowercase hex characters; the read endpoint accepts 24–64).
+  securitySchemes:
+    partnerKey:
+      type: http
+      scheme: bearer
+      bearerFormat: sss_pk_...
+      description: 'Partner API key. Send as `Authorization: Bearer sss_pk_...`.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-session
+      description: SignSealShip dashboard login session cookie. Accepted by the `/api/partner/webhooks` management routes as an alternative to the partner key.

@@ -1,0 +1,501 @@
+openapi: 3.2.0
+info:
+  title: SignSealShip Partner Orders API
+  version: 1.0.0
+  description: 'The SignSealShip partner API: create sign / notarize / ship orders, create Verified Closing Rooms, seal Closing Passports and Proof Passports, and manage webhooks. Partner endpoints authenticate with a bearer key (`Authorization: Bearer sss_pk_...`); public verification endpoints need no key — possession of the verify, room, or order code is the authorization. See the Guides for full prose, rate limits, and signature verification.'
+  contact:
+    name: SignSealShip
+    url: https://signsealship.com/partner
+servers:
+- url: https://signsealship.com
+  description: Production
+security:
+- partnerKey: []
+tags:
+- name: Orders
+  description: B2B order intake — create sign / notarize / ship orders, track them, and mint Stripe hosted checkout.
+paths:
+  /api/partner/orders:
+    post:
+      tags:
+      - Orders
+      summary: Create an order
+      description: Create a sign / notarize / ship order for a client's own completed document. Send the PDF as the multipart part `document`, or reference a fill-online result with `fill_token` — exactly one of the two, never both. Pricing is computed entirely server-side from the B2B price book with your subscription tier's discount applied automatically; there is no client-sent amount anywhere in the API. Order state advances only via the verified Stripe webhook — minting a checkout session (or a payer landing on the success page) never changes state. Rate limited with `partner-write` (60/min per key).
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Order created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+              example:
+                orderCode: an-order-public-code
+                orderUrl: /orders/an-order-public-code
+                status: QuoteReady
+                externalReference: MATTER-2291
+                subtotalCents: 7635
+                discountCents: 500
+                totalCents: 7135
+                lines:
+                - type: WorkflowFee
+                  label: Document workflow
+                  amountCents: 1200
+                - type: NotaryFee
+                  label: Online notarization
+                  amountCents: 2500
+                - type: ShippingCarrierRate
+                  label: Carrier postage (rated for your address)
+                  amountCents: 2440
+                - type: ShippingHandlingFee
+                  label: Shipping & handling
+                  amountCents: 1495
+                - type: Discount
+                  label: Code WELCOME5
+                  amountCents: -500
+                checkoutUrl: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      operationId: postApiPartnerOrders
+      x-operation-id-source: derived
+    get:
+      tags:
+      - Orders
+      summary: List your orders
+      description: List the orders created with your partner key, newest first. Rate limited with `partner-write` (60/min per key).
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20
+        description: Page size. Default 20, maximum 100.
+      - name: status
+        in: query
+        schema:
+          type: string
+        description: Filter by order status name (e.g. `QuoteReady`, `Paid`, `Completed`).
+      - name: external_reference
+        in: query
+        schema:
+          type: string
+        description: Filter to orders created with this `external_reference`.
+      responses:
+        '200':
+          description: Your orders.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orders:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OrderSummary'
+                  requestId:
+                    type: string
+                    description: This request's id — quote it in support tickets.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      operationId: getApiPartnerOrders
+      x-operation-id-source: derived
+  /api/partner/orders/{code}:
+    get:
+      tags:
+      - Orders
+      summary: Fetch an order
+      description: 'Fetch one of your orders by its public code. Partner-scoped: another partner''s order and an unknown code return the identical 404. Rate limited with `partner-write` (60/min per key).'
+      parameters:
+      - $ref: '#/components/parameters/OrderCode'
+      responses:
+        '200':
+          description: The order.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Unknown code — or another partner's order; the two are indistinguishable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: getApiPartnerOrdersByCode
+      x-operation-id-source: derived
+  /api/partner/orders/{code}/checkout:
+    post:
+      tags:
+      - Orders
+      summary: Mint a checkout session
+      description: Mint the Stripe hosted-checkout URL for a payable order. Minting never changes order state — state advances only via the verified Stripe webhook after payment clears. Rate limited with `partner-write` (60/min per key).
+      parameters:
+      - $ref: '#/components/parameters/OrderCode'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Checkout session minted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkoutUrl:
+                    type: string
+                    description: The Stripe hosted-checkout URL to hand to the payer.
+                  requestId:
+                    type: string
+                    description: This request's id — quote it in support tickets.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Unknown code — or another partner's order; the two are indistinguishable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: The order is not payable in its current state (for example, awaiting a manual quote).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Stripe failed to create the session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Payments are not configured.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: postApiPartnerOrdersByCodeCheckout
+      x-operation-id-source: derived
+  /api/partner/me:
+    get:
+      tags:
+      - Orders
+      summary: Who am I
+      description: 'The identity behind your API key: firm name, subscription tier, whether live keys are enabled for the account, and whether this key is a `test` or `live` key. Powers connection labels in integrations (e.g. Zapier).'
+      responses:
+        '200':
+          description: The key's own account.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  firmName:
+                    type: string
+                  tier:
+                    type: string
+                  liveEnabled:
+                    type: boolean
+                  environment:
+                    type: string
+                    enum:
+                    - test
+                    - live
+        '401':
+          description: No valid credential presented — send a partner API key, or sign in and link a session. Returned 403 before 2026-08-01.
+        '403':
+          description: Your session is valid but is not linked to a partner. Link one at https://signsealship.com/partner with a partner API key.
+      operationId: getApiPartnerMe
+      x-operation-id-source: derived
+components:
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing, malformed, revoked, or unknown partner key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: A valid partner API key is required.
+  schemas:
+    OrderDetail:
+      type: object
+      properties:
+        requestId:
+          type: string
+          description: This request's id — quote it in support tickets.
+        orderCode:
+          type: string
+        orderUrl:
+          type: string
+        status:
+          type: string
+        services:
+          $ref: '#/components/schemas/OrderServices'
+        envelopeStatus:
+          type:
+          - string
+          - 'null'
+          description: The e-sign envelope's status when the order includes signing, else `null`.
+        externalReference:
+          type:
+          - string
+          - 'null'
+        customerEmail:
+          type: string
+        subtotalCents:
+          type: integer
+        discountCents:
+          type: integer
+        totalCents:
+          type: integer
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+        createdAt:
+          type: string
+          format: date-time
+    OrderSummary:
+      type: object
+      properties:
+        orderCode:
+          type: string
+        status:
+          type: string
+        services:
+          $ref: '#/components/schemas/OrderServices'
+        totalCents:
+          type: integer
+        externalReference:
+          type:
+          - string
+          - 'null'
+        customerEmail:
+          type: string
+          description: The signer / client email from the create call.
+        createdAt:
+          type: string
+          format: date-time
+    OrderLine:
+      type: object
+      properties:
+        type:
+          type: string
+          description: Machine-readable line type.
+        label:
+          type: string
+          description: Display label for the line.
+        amountCents:
+          type: integer
+          description: Line amount in USD cents.
+    CreateOrderRequest:
+      type: object
+      required:
+      - email
+      - byod_confirmed
+      description: Multipart form fields. Send exactly one of `document` or `fill_token` — never both.
+      properties:
+        document:
+          type: string
+          format: binary
+          description: The client's own completed PDF, up to 35 MB. Mutually exclusive with `fill_token`.
+        fill_token:
+          type: string
+          pattern: ^[0-9a-f]{40}$
+          description: A 40-character lowercase-hex token from the fill-online rail, in place of a `document` upload. Mutually exclusive with `document`.
+        email:
+          type: string
+          format: email
+          description: The signer / client email. Required.
+        name:
+          type: string
+          description: The signer / client name.
+        doc_slug:
+          type: string
+          description: Catalog document slug. When present, the catalog row defines the sign / notary services; shipping stays additive via `svc_ship`.
+        svc_sign:
+          type: string
+          enum:
+          - 'true'
+          - 'on'
+          description: Include e-signing.
+        svc_notary:
+          type: string
+          enum:
+          - 'true'
+          - 'on'
+          description: Include online notarization.
+        svc_ship:
+          type: string
+          enum:
+          - 'true'
+          - 'on'
+          description: Include shipping — send the `ship_*` address fields with it.
+        signer_state:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: Two-letter US state where the signer is located.
+        dest_state:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: Two-letter US state the shipment is destined for.
+        byod_confirmed:
+          type: string
+          enum:
+          - 'true'
+          - 'on'
+          description: Required. Attests that this is the client's own completed document (bring-your-own-document).
+        external_reference:
+          type: string
+          maxLength: 120
+          description: Your own matter / file number, up to 120 characters. Echoed on webhook events and listings.
+        ship_name:
+          type: string
+          description: Recipient name (when shipping).
+        ship_line1:
+          type: string
+          description: Address line 1 (when shipping).
+        ship_line2:
+          type: string
+          description: Address line 2.
+        ship_city:
+          type: string
+          description: City (when shipping).
+        ship_state:
+          type: string
+          description: Two-letter US state (when shipping).
+        ship_postal:
+          type: string
+          description: ZIP / postal code (when shipping).
+        ship_method:
+          type: string
+          enum:
+          - label
+          - print_mail
+          description: Delivery method when shipping is selected. `label` (default) buys a prepaid carrier label; `print_mail` has SignSealShip print and mail the completed document ($12.95 line, replacing the label handling fee). Unrecognized values fall back to `label`.
+        from_name:
+          type: string
+          description: 'Optional sender / return address (all of `from_line1`, `from_city`, `from_state`, `from_postal` must accompany it): printed as the return address on print-and-mail letters and used as the ship-from on prepaid labels, so rates price from the true origin and undeliverable mail returns to the actual sender. Absent ⇒ the platform business address.'
+        from_line1:
+          type: string
+          description: Return address street line 1.
+        from_line2:
+          type: string
+          description: Return address street line 2.
+        from_city:
+          type: string
+          description: Return address city.
+        from_state:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: Return address two-letter US state.
+        from_postal:
+          type: string
+          description: Return address ZIP / postal code.
+        fax_to:
+          type: string
+          description: 'Adds sealed fax delivery ($9.00): a 10-digit US number or an international number in `+country` format, normalized to E.164. An uninterpretable number is rejected with a 400 — never silently dropped.'
+        create_checkout:
+          type: string
+          enum:
+          - 'true'
+          - 'on'
+          description: Also mint the Stripe hosted-checkout session in the same call and return it as `checkoutUrl`.
+    CreateOrderResponse:
+      type: object
+      properties:
+        requestId:
+          type: string
+          description: This request's id — quote it in support tickets.
+        orderCode:
+          type: string
+          description: The order's public code.
+        orderUrl:
+          type: string
+          description: Root-relative path to the order page, `/orders/{orderCode}`.
+        status:
+          type: string
+          description: The order's status name (e.g. `QuoteReady`).
+        externalReference:
+          type:
+          - string
+          - 'null'
+          description: The `external_reference` you sent, or `null`.
+        faxToNumber:
+          type:
+          - string
+          - 'null'
+          description: The normalized E.164 fax destination when `fax_to` was sent, or `null`.
+        subtotalCents:
+          type: integer
+        discountCents:
+          type: integer
+          description: Your subscription-tier discount, computed and applied server-side.
+        totalCents:
+          type: integer
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+        checkoutUrl:
+          type:
+          - string
+          - 'null'
+          description: The Stripe hosted-checkout URL. `null` unless `create_checkout=true` was sent, payments are configured, and the order is payable — a ManualQuoteRequired order returns no checkout.
+    OrderServices:
+      type: string
+      description: 'Which services the order includes, as a comma-separated flags string. Possible flags: `Sign`, `Notarize`, `Ship`, `Fax`. Parse by splitting on `", "` — this is NOT an object of booleans (corrected 2026-08-01; the schema previously mis-documented it as one).'
+      example: Sign, Notarize, Ship
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 255
+      description: Optional. Retries carrying the same key replay the original response instead of acting twice. 8–255 characters; scope one key to one logical action.
+    OrderCode:
+      name: code
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The order's public code from the create response.
+  securitySchemes:
+    partnerKey:
+      type: http
+      scheme: bearer
+      bearerFormat: sss_pk_...
+      description: 'Partner API key. Send as `Authorization: Bearer sss_pk_...`.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-session
+      description: SignSealShip dashboard login session cookie. Accepted by the `/api/partner/webhooks` management routes as an alternative to the partner key.

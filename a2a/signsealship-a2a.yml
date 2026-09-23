@@ -26,33 +26,18 @@ card:
     url: https://docs.signsealship.com/.well-known/agent-skills/sign/skill.md
     fetched: true
     file: ../skills/signsealship-sign-skill.md
-grade: conformant
-grade_basis: >-
-  A2A 1.0.0 hard checks all pass: capabilities is a JSON object, protocolVersion is present,
-  and skills is an array. Optional preferredTransport, defaultInputModes and defaultOutputModes
-  are all present as well.
+grade_basis: 'A2A 1.0.0 hard checks all pass: capabilities is a JSON object, protocolVersion is present, and skills is an array. Optional preferredTransport, defaultInputModes and defaultOutputModes are all present as well.'
 deviations:
 - field: description
-  issue: >-
-    The card carries no top-level description. A2A treats description as a required member of
-    AgentCard; the human-readable purpose has to be read out of the single skill instead.
+  issue: The card carries no top-level description. A2A treats description as a required member of AgentCard; the human-readable purpose has to be read out of the single skill instead.
 - field: protocolVersion
-  issue: >-
-    Declares "0.3" rather than a 1.x protocol version, so it is a pre-1.0 card served at the
-    post-0.3 canonical path.
+  issue: Declares "0.3" rather than a 1.x protocol version, so it is a pre-1.0 card served at the post-0.3 canonical path.
 - field: supportedInterfaces
-  issue: >-
-    Uses supportedInterfaces[]. A2A 0.3 names this member additionalInterfaces[]; the shape of
-    each entry (url + protocolBinding + protocolVersion) is otherwise conventional.
+  issue: Uses supportedInterfaces[]. A2A 0.3 names this member additionalInterfaces[]; the shape of each entry (url + protocolBinding + protocolVersion) is otherwise conventional.
 - field: skills[].tags
   issue: skills[0].tags is an empty array, so the skill carries no discovery keywords.
 - field: scope
-  issue: >-
-    The card describes the DOCUMENTATION site, not the Partner API. It is a Mintlify-generated
-    docs agent card -- an agent that reads it learns how to read the docs, not how to create an
-    order. It is genuinely served by a SignSealShip-controlled host, so it counts, but it is not
-    an agent interface onto the product.
-ownership_check: >-
-  Served from docs.signsealship.com, the documentation host named as humanURL in the provider's
-  own /.well-known/apis.json. provider.organization and every url in the card resolve to
-  docs.signsealship.com. Host is controlled by SignSealShip.
+  issue: The card describes the DOCUMENTATION site, not the Partner API. It is a Mintlify-generated docs agent card -- an agent that reads it learns how to read the docs, not how to create an order. It is genuinely served by a SignSealShip-controlled host, so it counts, but it is not an agent interface onto the product.
+ownership_check: Served from docs.signsealship.com, the documentation host named as humanURL in the provider's own /.well-known/apis.json. provider.organization and every url in the card resolve to docs.signsealship.com. Host is controlled by SignSealShip.
+conformance:
+  grade: conformant

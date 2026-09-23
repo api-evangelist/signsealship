@@ -1,0 +1,271 @@
+openapi: 3.2.0
+info:
+  title: SignSealShip Partner Proof Passport API
+  version: 1.0.0
+  description: 'The SignSealShip partner API: create sign / notarize / ship orders, create Verified Closing Rooms, seal Closing Passports and Proof Passports, and manage webhooks. Partner endpoints authenticate with a bearer key (`Authorization: Bearer sss_pk_...`); public verification endpoints need no key — possession of the verify, room, or order code is the authorization. See the Guides for full prose, rate limits, and signature verification.'
+  contact:
+    name: SignSealShip
+    url: https://signsealship.com/partner
+servers:
+- url: https://signsealship.com
+  description: Production
+security:
+- partnerKey: []
+tags:
+- name: Proof Passport
+  description: Seal and verify a single executed PDF.
+paths:
+  /api/passport/seal:
+    post:
+      tags:
+      - Proof Passport
+      summary: Seal a document
+      description: Submit a finished, signed PDF (multipart part named `file`, up to 35 MB). It returns sealed with Google Cloud KMS, timestamped by independent RFC 3161 and OpenTimestamps authorities, and wrapped in a public verification URL. Bytes are streamed in memory, never to disk, and discarded after sealing.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The executed PDF. Maximum 35 MB.
+      responses:
+        '200':
+          description: Document sealed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProofSealResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+      operationId: postApiPassportSeal
+      x-operation-id-source: derived
+  /api/passport/{id}:
+    get:
+      tags:
+      - Proof Passport
+      summary: Fetch a passport
+      description: Fetch a Proof Passport you created. Partner isolation is enforced — a passport is visible only to the partner that created it.
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: The passport's UUID from the seal response.
+      responses:
+        '200':
+          description: The passport (seal fields minus timestamps, plus createdAt).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProofPassport'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: No such passport (including another partner's).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      operationId: getApiPassportById
+      x-operation-id-source: derived
+  /api/passport/verify/{code}:
+    get:
+      tags:
+      - Proof Passport
+      summary: Verify a passport (public)
+      description: 'Public, self-contained verification of a Proof Passport. Never exposes the partner identity. Malformed and unknown codes return the identical generic 404 `{"verdict": "unknown"}`.'
+      security: []
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The 26-character verify code.
+      responses:
+        '200':
+          description: Verification result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProofVerification'
+        '404':
+          description: Unknown or malformed code.
+      operationId: getApiPassportVerifyByCode
+      x-operation-id-source: derived
+  /api/passport/verify/{code}/document:
+    get:
+      tags:
+      - Proof Passport
+      summary: Download the sealed document (public)
+      description: Streams the byte-identical sealed PDF. Any holder of the code can fetch it; the file also verifies on its own in any PDF reader's signature panel.
+      security: []
+      parameters:
+      - name: code
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: The sealed PDF.
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Unknown code or missing artifact.
+      operationId: getApiPassportVerifyByCodeDocument
+      x-operation-id-source: derived
+components:
+  schemas:
+    ProofSealResponse:
+      type: object
+      properties:
+        passportId:
+          type: string
+          format: uuid
+        verifyCode:
+          type: string
+        verifyUrl:
+          type: string
+          description: Absolute public verification URL.
+        docSha256:
+          type: string
+          description: SHA-256 of the exact bytes you uploaded (pre-seal).
+        sealedSha256:
+          type: string
+          description: SHA-256 of the sealed PDF SignSealShip produced.
+        status:
+          type: string
+          example: sealed
+        environment:
+          type: string
+          enum:
+          - live
+          - test
+          description: Environment of the key that sealed it. The public verifier flags test-environment evidence.
+        timestamps:
+          type: object
+          description: Independent timestamp evidence; either member is `null` when the authority could not be reached.
+          properties:
+            rfc3161:
+              type:
+              - object
+              - 'null'
+              properties:
+                authority:
+                  type: string
+                timestampedAtUtc:
+                  type: string
+                  format: date-time
+            openTimestamps:
+              type:
+              - object
+              - 'null'
+              properties:
+                calendar:
+                  type: string
+                submittedAtUtc:
+                  type: string
+                  format: date-time
+                status:
+                  type: string
+                  example: pending
+    ProofVerification:
+      type: object
+      properties:
+        verdict:
+          type: string
+          enum:
+          - verified
+          - verified_test
+          example: verified
+          description: '`verified_test` marks a passport sealed with a TEST-environment key — it is not production evidence.'
+        environment:
+          type: string
+          enum:
+          - live
+          - test
+        verifyCode:
+          type: string
+        sealedSha256:
+          type: string
+        docSha256:
+          type: string
+        sealedAtUtc:
+          type: string
+          format: date-time
+        source:
+          type: string
+          example: proof_passport_api
+        certificateAvailable:
+          type: boolean
+    ProofPassport:
+      type: object
+      properties:
+        passportId:
+          type: string
+          format: uuid
+        verifyCode:
+          type: string
+        verifyUrl:
+          type: string
+        docSha256:
+          type: string
+        sealedSha256:
+          type: string
+        status:
+          type: string
+          example: sealed
+        environment:
+          type: string
+          enum:
+          - live
+          - test
+          description: The environment of the API key that sealed it. Sandbox-keyed passports stay visibly sandbox on every surface, including public verification.
+        createdAt:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing, malformed, revoked, or unknown partner key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: A valid partner API key is required.
+  securitySchemes:
+    partnerKey:
+      type: http
+      scheme: bearer
+      bearerFormat: sss_pk_...
+      description: 'Partner API key. Send as `Authorization: Bearer sss_pk_...`.'
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-session
+      description: SignSealShip dashboard login session cookie. Accepted by the `/api/partner/webhooks` management routes as an alternative to the partner key.
