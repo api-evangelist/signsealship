@@ -142,6 +142,20 @@ paths:
       operationId: postApiPartnerSandboxOrdersByCodeAdvance
       x-operation-id-source: derived
 components:
+  parameters:
+    OrderCode:
+      name: code
+      in: path
+      required: true
+      schema:
+        type: string
+      description: The order's public code from the create response.
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
   responses:
     Unauthorized:
       description: Missing, malformed, revoked, or unknown partner key.
@@ -151,20 +165,6 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             error: A valid partner API key is required.
-  schemas:
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
-  parameters:
-    OrderCode:
-      name: code
-      in: path
-      required: true
-      schema:
-        type: string
-      description: The order's public code from the create response.
   securitySchemes:
     partnerKey:
       type: http

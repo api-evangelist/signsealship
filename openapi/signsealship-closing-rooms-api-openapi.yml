@@ -323,144 +323,15 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    CreateRoomRequest:
-      type: object
-      required:
-      - name
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Display name shown to every party (e.g. a property address).
-        reference:
-          type: string
-          maxLength: 200
-          description: Your internal file number.
-    ActivityItem:
-      type: object
-      properties:
-        orderCode:
-          type: string
-        action:
-          type: string
-          enum:
-          - order.created
-          - order.transition
-          - order.claimed
-          - order.cancelled
-          - signing_link.issued
-          - room.order_attached
-        fromStatus:
-          type:
-          - string
-          - 'null'
-        toStatus:
-          type:
-          - string
-          - 'null'
-        occurredAt:
-          type: string
-          format: date-time
-    Branding:
+    RoomPassportInfo:
       type:
       - object
       - 'null'
       properties:
-        brandName:
-          type:
-          - string
-          - 'null'
-        accentColor:
-          type:
-          - string
-          - 'null'
-          description: Hex color like `#1a2b3c`.
-        logoUrl:
-          type:
-          - string
-          - 'null'
-          description: Public https URL of the partner's logo.
-    RoomView:
-      type: object
-      properties:
-        roomCode:
+        version:
+          type: integer
+        verifyCode:
           type: string
-        name:
-          type: string
-        reference:
-          type:
-          - string
-          - 'null'
-        status:
-          type: string
-          example: open
-        partnerName:
-          type: string
-        branding:
-          $ref: '#/components/schemas/Branding'
-        progress:
-          type: object
-          properties:
-            total:
-              type: integer
-            signed:
-              type: integer
-            sealed:
-              type: integer
-            delivered:
-              type: integer
-        orders:
-          type: array
-          items:
-            $ref: '#/components/schemas/RoomOrderCard'
-        activity:
-          type: array
-          items:
-            $ref: '#/components/schemas/ActivityItem'
-        passport:
-          $ref: '#/components/schemas/RoomPassportInfo'
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-    RoomParticipant:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        email:
-          type: string
-          format: email
-          description: The real address. The PUBLIC room view masks this; only the owning partner reads it unmasked here.
-        role:
-          type: string
-        addedAt:
-          type: string
-          format: date-time
-    CreateRoomResponse:
-      type: object
-      properties:
-        roomCode:
-          type: string
-          description: The room's bearer code — 40 lowercase hex characters.
-        roomUrl:
-          type: string
-          description: Root-relative path to the shareable page, `/rooms/{roomCode}`.
-        name:
-          type: string
-        reference:
-          type:
-          - string
-          - 'null'
-        status:
-          type: string
-          example: open
         createdAt:
           type: string
           format: date-time
@@ -539,58 +410,25 @@ components:
         attachedAt:
           type: string
           format: date-time
-    RoomSummary:
-      type: object
-      properties:
-        roomCode:
-          type: string
-        name:
-          type: string
-        reference:
-          type:
-          - string
-          - 'null'
-        status:
-          type: string
-          example: open
-        orderCount:
-          type: integer
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-    RoomPassportInfo:
+    Branding:
       type:
       - object
       - 'null'
       properties:
-        version:
-          type: integer
-        verifyCode:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
-    AttachOrderRequest:
-      type: object
-      required:
-      - orderCode
-      properties:
-        orderCode:
-          type: string
-          minLength: 24
-          maxLength: 64
-          description: The order's public code.
-        label:
-          type: string
-          description: A display label for the document card.
+        brandName:
+          type:
+          - string
+          - 'null'
+        accentColor:
+          type:
+          - string
+          - 'null'
+          description: Hex color like `#1a2b3c`.
+        logoUrl:
+          type:
+          - string
+          - 'null'
+          description: Public https URL of the partner's logo.
     CallJoinResponse:
       oneOf:
       - type: object
@@ -629,6 +467,40 @@ components:
             type: string
           message:
             type: string
+    CreateRoomResponse:
+      type: object
+      properties:
+        roomCode:
+          type: string
+          description: The room's bearer code — 40 lowercase hex characters.
+        roomUrl:
+          type: string
+          description: Root-relative path to the shareable page, `/rooms/{roomCode}`.
+        name:
+          type: string
+        reference:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          example: open
+        createdAt:
+          type: string
+          format: date-time
+    AttachOrderRequest:
+      type: object
+      required:
+      - orderCode
+      properties:
+        orderCode:
+          type: string
+          minLength: 24
+          maxLength: 64
+          description: The order's public code.
+        label:
+          type: string
+          description: A display label for the document card.
     AddParticipantRequest:
       type: object
       required:
@@ -649,7 +521,141 @@ components:
           maxLength: 40
           default: client
           description: Their part in the deal — client, signer, agent, lender, attorney, title_officer, observer, or anything else you use. Descriptive only; it grants no authorization.
+    ActivityItem:
+      type: object
+      properties:
+        orderCode:
+          type: string
+        action:
+          type: string
+          enum:
+          - order.created
+          - order.transition
+          - order.claimed
+          - order.cancelled
+          - signing_link.issued
+          - room.order_attached
+        fromStatus:
+          type:
+          - string
+          - 'null'
+        toStatus:
+          type:
+          - string
+          - 'null'
+        occurredAt:
+          type: string
+          format: date-time
+    RoomSummary:
+      type: object
+      properties:
+        roomCode:
+          type: string
+        name:
+          type: string
+        reference:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          example: open
+        orderCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    CreateRoomRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Display name shown to every party (e.g. a property address).
+        reference:
+          type: string
+          maxLength: 200
+          description: Your internal file number.
+    RoomView:
+      type: object
+      properties:
+        roomCode:
+          type: string
+        name:
+          type: string
+        reference:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          example: open
+        partnerName:
+          type: string
+        branding:
+          $ref: '#/components/schemas/Branding'
+        progress:
+          type: object
+          properties:
+            total:
+              type: integer
+            signed:
+              type: integer
+            sealed:
+              type: integer
+            delivered:
+              type: integer
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomOrderCard'
+        activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityItem'
+        passport:
+          $ref: '#/components/schemas/RoomPassportInfo'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    RoomParticipant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+          description: The real address. The PUBLIC room view masks this; only the owning partner reads it unmasked here.
+        role:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
   responses:
+    NotFound:
+      description: Not found. Unknown codes read as a generic not-found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     BadRequest:
       description: Invalid request.
       content:
@@ -664,12 +670,6 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             error: A valid partner API key is required.
-    NotFound:
-      description: Not found. Unknown codes read as a generic not-found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
   parameters:
     RoomCode:
       name: roomCode

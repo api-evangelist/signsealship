@@ -130,59 +130,6 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    ProofSealResponse:
-      type: object
-      properties:
-        passportId:
-          type: string
-          format: uuid
-        verifyCode:
-          type: string
-        verifyUrl:
-          type: string
-          description: Absolute public verification URL.
-        docSha256:
-          type: string
-          description: SHA-256 of the exact bytes you uploaded (pre-seal).
-        sealedSha256:
-          type: string
-          description: SHA-256 of the sealed PDF SignSealShip produced.
-        status:
-          type: string
-          example: sealed
-        environment:
-          type: string
-          enum:
-          - live
-          - test
-          description: Environment of the key that sealed it. The public verifier flags test-environment evidence.
-        timestamps:
-          type: object
-          description: Independent timestamp evidence; either member is `null` when the authority could not be reached.
-          properties:
-            rfc3161:
-              type:
-              - object
-              - 'null'
-              properties:
-                authority:
-                  type: string
-                timestampedAtUtc:
-                  type: string
-                  format: date-time
-            openTimestamps:
-              type:
-              - object
-              - 'null'
-              properties:
-                calendar:
-                  type: string
-                submittedAtUtc:
-                  type: string
-                  format: date-time
-                status:
-                  type: string
-                  example: pending
     ProofVerification:
       type: object
       properties:
@@ -238,6 +185,59 @@ components:
         createdAt:
           type: string
           format: date-time
+    ProofSealResponse:
+      type: object
+      properties:
+        passportId:
+          type: string
+          format: uuid
+        verifyCode:
+          type: string
+        verifyUrl:
+          type: string
+          description: Absolute public verification URL.
+        docSha256:
+          type: string
+          description: SHA-256 of the exact bytes you uploaded (pre-seal).
+        sealedSha256:
+          type: string
+          description: SHA-256 of the sealed PDF SignSealShip produced.
+        status:
+          type: string
+          example: sealed
+        environment:
+          type: string
+          enum:
+          - live
+          - test
+          description: Environment of the key that sealed it. The public verifier flags test-environment evidence.
+        timestamps:
+          type: object
+          description: Independent timestamp evidence; either member is `null` when the authority could not be reached.
+          properties:
+            rfc3161:
+              type:
+              - object
+              - 'null'
+              properties:
+                authority:
+                  type: string
+                timestampedAtUtc:
+                  type: string
+                  format: date-time
+            openTimestamps:
+              type:
+              - object
+              - 'null'
+              properties:
+                calendar:
+                  type: string
+                submittedAtUtc:
+                  type: string
+                  format: date-time
+                status:
+                  type: string
+                  example: pending
     Error:
       type: object
       properties:

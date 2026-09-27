@@ -30,10 +30,11 @@ tags:
 - Remote Online Notarization
 - Electronic Signature
 - Document Verification
-- Legal Technology
-- Real-Estate
+- Legal Tech
+- Real Estate
 - Title and Escrow
 - Shipping
+- A2A
 tags_raw:
 - notarization
 - remote online notarization
@@ -43,6 +44,9 @@ tags_raw:
 - real estate
 - title and escrow
 - shipping
+- Real-Estate
+- A2A
+- Legal Technology
 apis:
 - aid: signsealship.com:ron-laws-dataset
   name: Remote online notarization requirements by U.S. jurisdiction
@@ -53,7 +57,6 @@ apis:
     CC BY 4.0 and archived at Zenodo (DOI 10.5281/zenodo.22213684). Values are reported as the cited sources
     state them and are not legal advice.
   humanURL: https://signsealship.com/ron-laws
-  baseURL: https://signsealship.com
   tags:
   - Open Data
   - Remote Online Notarization
@@ -83,7 +86,6 @@ apis:
   name: SignSealShip Partner API Closing Passports API
   description: Room-level, hash-chained, KMS-sealed evidence manifests.
   humanURL: https://docs.signsealship.com
-  baseURL: https://signsealship.com
   tags:
   - Closing Passports
   properties:
@@ -121,7 +123,6 @@ apis:
   name: SignSealShip Partner API Closing Rooms API
   description: Verified Closing Rooms — one shareable page per transaction.
   humanURL: https://docs.signsealship.com
-  baseURL: https://signsealship.com
   tags:
   - Closing Rooms
   properties:
@@ -159,7 +160,6 @@ apis:
   name: SignSealShip Partner API Launchpad & Analytics API
   description: Your workspace's go-live checklist and tenant-scoped analytics.
   humanURL: https://docs.signsealship.com
-  baseURL: https://signsealship.com
   tags:
   - Launchpad & Analytics
   properties:
@@ -197,7 +197,6 @@ apis:
   name: SignSealShip Partner API Onboarding API
   description: Request partner API access.
   humanURL: https://docs.signsealship.com
-  baseURL: https://signsealship.com
   tags:
   - Onboarding
   properties:
@@ -236,7 +235,6 @@ apis:
   description: >-
     B2B order intake — create sign / notarize / ship orders, track them, and mint Stripe hosted checkout.
   humanURL: https://docs.signsealship.com
-  baseURL: https://signsealship.com
   tags:
   - Order
   tags_raw:
@@ -276,7 +274,6 @@ apis:
   name: SignSealShip Partner API Proof Passport API
   description: Seal and verify a single executed PDF.
   humanURL: https://docs.signsealship.com
-  baseURL: https://signsealship.com
   tags:
   - Proof Passport
   properties:
@@ -316,7 +313,6 @@ apis:
     Deterministic lifecycle simulation for TEST orders (sss_pk_test_ keys) — real state machine, real
     signed webhooks, no live money.
   humanURL: https://docs.signsealship.com
-  baseURL: https://signsealship.com
   tags:
   - Sandbox
   properties:
@@ -354,7 +350,6 @@ apis:
   name: SignSealShip Partner API Webhooks API
   description: Signed event delivery and subscription management.
   humanURL: https://docs.signsealship.com
-  baseURL: https://signsealship.com
   tags:
   - Webhook
   tags_raw:
@@ -477,3 +472,10 @@ x-enrichment:
   status: enriched
   artifacts_added: 34
   pass: local-v1
+x-a2a:
+  verified: true
+  probed: '2026-09-26'
+  url: "https://docs.signsealship.com/.well-known/agent-card.json"
+  grade: "conformant"
+  protocol_version: "0.3"
+  control: 404
