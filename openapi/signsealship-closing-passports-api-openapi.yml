@@ -97,26 +97,28 @@ paths:
       operationId: getApiVerifyRoomByVerifyCodePdf
       x-operation-id-source: derived
 components:
+  responses:
+    Unauthorized:
+      description: Missing, malformed, revoked, or unknown partner key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: A valid partner API key is required.
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Not found. Unknown codes read as a generic not-found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   schemas:
-    Branding:
-      type:
-      - object
-      - 'null'
-      properties:
-        brandName:
-          type:
-          - string
-          - 'null'
-        accentColor:
-          type:
-          - string
-          - 'null'
-          description: Hex color like `#1a2b3c`.
-        logoUrl:
-          type:
-          - string
-          - 'null'
-          description: Public https URL of the partner's logo.
     RoomPassportVerification:
       type: object
       properties:
@@ -144,11 +146,6 @@ components:
         downloadUrl:
           type: string
           description: '`/api/verify/room/{verifyCode}/pdf`.'
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
     PassportSealResponse:
       type: object
       properties:
@@ -173,27 +170,30 @@ components:
         createdAt:
           type: string
           format: date-time
-  responses:
-    NotFound:
-      description: Not found. Unknown codes read as a generic not-found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    BadRequest:
-      description: Invalid request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    Unauthorized:
-      description: Missing, malformed, revoked, or unknown partner key.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error: A valid partner API key is required.
+    Branding:
+      type:
+      - object
+      - 'null'
+      properties:
+        brandName:
+          type:
+          - string
+          - 'null'
+        accentColor:
+          type:
+          - string
+          - 'null'
+          description: Hex color like `#1a2b3c`.
+        logoUrl:
+          type:
+          - string
+          - 'null'
+          description: Public https URL of the partner's logo.
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
   parameters:
     RoomCode:
       name: roomCode

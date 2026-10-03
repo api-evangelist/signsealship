@@ -130,6 +130,32 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
+    ProofPassport:
+      type: object
+      properties:
+        passportId:
+          type: string
+          format: uuid
+        verifyCode:
+          type: string
+        verifyUrl:
+          type: string
+        docSha256:
+          type: string
+        sealedSha256:
+          type: string
+        status:
+          type: string
+          example: sealed
+        environment:
+          type: string
+          enum:
+          - live
+          - test
+          description: The environment of the API key that sealed it. Sandbox-keyed passports stay visibly sandbox on every surface, including public verification.
+        createdAt:
+          type: string
+          format: date-time
     ProofVerification:
       type: object
       properties:
@@ -159,32 +185,6 @@ components:
           example: proof_passport_api
         certificateAvailable:
           type: boolean
-    ProofPassport:
-      type: object
-      properties:
-        passportId:
-          type: string
-          format: uuid
-        verifyCode:
-          type: string
-        verifyUrl:
-          type: string
-        docSha256:
-          type: string
-        sealedSha256:
-          type: string
-        status:
-          type: string
-          example: sealed
-        environment:
-          type: string
-          enum:
-          - live
-          - test
-          description: The environment of the API key that sealed it. Sandbox-keyed passports stay visibly sandbox on every surface, including public verification.
-        createdAt:
-          type: string
-          format: date-time
     ProofSealResponse:
       type: object
       properties:
@@ -244,12 +244,6 @@ components:
         error:
           type: string
   responses:
-    BadRequest:
-      description: Invalid request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
     Unauthorized:
       description: Missing, malformed, revoked, or unknown partner key.
       content:
@@ -258,6 +252,12 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             error: A valid partner API key is required.
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   securitySchemes:
     partnerKey:
       type: http

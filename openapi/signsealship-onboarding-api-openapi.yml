@@ -53,6 +53,26 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    PartnerRequestResponse:
+      type: object
+      required:
+      - status
+      - message
+      properties:
+        status:
+          type: string
+          enum:
+          - issued
+          - pending
+          description: '`issued` — a trial key was created and emailed. `pending` — queued for human review.'
+        message:
+          type: string
+          description: A browser-safe confirmation message.
     PartnerRequest:
       type: object
       required:
@@ -88,26 +108,6 @@ components:
         recaptchaToken:
           type: string
           description: Optional bot-screening token; omit when calling the API directly.
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
-    PartnerRequestResponse:
-      type: object
-      required:
-      - status
-      - message
-      properties:
-        status:
-          type: string
-          enum:
-          - issued
-          - pending
-          description: '`issued` — a trial key was created and emailed. `pending` — queued for human review.'
-        message:
-          type: string
-          description: A browser-safe confirmation message.
   responses:
     BadRequest:
       description: Invalid request.
