@@ -391,6 +391,9 @@ maintainers:
   X-twitter: ''
   email: ''
 common:
+- type: CapabilityMap
+  url: capabilities/signsealship-capability-edges.yml
+  name: SignSealShip Partner API Business Capability Map
 - type: MCPServer
   url: https://sign-seal-ship.main-kill-isr.mintlify.me/mcp
 - type: Overlay
