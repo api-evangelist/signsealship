@@ -457,6 +457,27 @@ paths:
       operationId: getApiPartnerWebhooksSignatureExample
       x-operation-id-source: derived
 components:
+  responses:
+    NotFound:
+      description: Not found. Unknown codes read as a generic not-found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing, malformed, revoked, or unknown partner key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: A valid partner API key is required.
   schemas:
     CreateWebhookRequest:
       type: object
@@ -495,23 +516,46 @@ components:
             - recording.rejected
             - recording.receipt_sealed
           description: The order topics deliver only for orders created through the Order API.
-    PassportWebhookResponse:
+    RotateWebhookResponse:
       type: object
       properties:
-        webhookId:
+        id:
           type: string
           format: uuid
+          description: The rotated subscription id.
+        secret:
+          type: string
+          description: The new signing secret, prefixed `sss_whsec_`. Shown exactly once — only its hash is stored. Deliveries are signed with both the old and the new secret for 24 hours, then the old secret stops signing.
+        signatureHeader:
+          type: string
+          description: Header name carrying the HMAC signature on every delivery.
+        previousSecretExpiresAt:
+          type: string
+          format: date-time
+          description: Until this instant deliveries are signed with BOTH secrets — accept either during the overlap.
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    CreateWebhookResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        secret:
+          type: string
+          description: Signing secret prefixed `sss_whsec_`. Shown exactly once.
         url:
           type: string
-        signingSecret:
-          type: string
-          description: Shown exactly once — store it now. Only its hash is kept.
+        topics:
+          type: array
+          items:
+            type: string
         signatureHeader:
           type: string
           example: SignSealShip-Signature
-        verification:
-          type: string
-          description: How to verify the HMAC signature.
     WebhookSubscription:
       type: object
       properties:
@@ -550,67 +594,23 @@ components:
         createdAt:
           type: string
           format: date-time
-    CreateWebhookResponse:
+    PassportWebhookResponse:
       type: object
       properties:
-        id:
+        webhookId:
           type: string
           format: uuid
-        secret:
-          type: string
-          description: Signing secret prefixed `sss_whsec_`. Shown exactly once.
         url:
           type: string
-        topics:
-          type: array
-          items:
-            type: string
+        signingSecret:
+          type: string
+          description: Shown exactly once — store it now. Only its hash is kept.
         signatureHeader:
           type: string
           example: SignSealShip-Signature
-    RotateWebhookResponse:
-      type: object
-      properties:
-        id:
+        verification:
           type: string
-          format: uuid
-          description: The rotated subscription id.
-        secret:
-          type: string
-          description: The new signing secret, prefixed `sss_whsec_`. Shown exactly once — only its hash is stored. Deliveries are signed with both the old and the new secret for 24 hours, then the old secret stops signing.
-        signatureHeader:
-          type: string
-          description: Header name carrying the HMAC signature on every delivery.
-        previousSecretExpiresAt:
-          type: string
-          format: date-time
-          description: Until this instant deliveries are signed with BOTH secrets — accept either during the overlap.
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
-  responses:
-    Unauthorized:
-      description: Missing, malformed, revoked, or unknown partner key.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            error: A valid partner API key is required.
-    BadRequest:
-      description: Invalid request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    NotFound:
-      description: Not found. Unknown codes read as a generic not-found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
+          description: How to verify the HMAC signature.
   securitySchemes:
     partnerKey:
       type: http

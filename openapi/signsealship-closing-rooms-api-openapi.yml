@@ -323,19 +323,38 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    AttachOrderRequest:
+    RoomPassportInfo:
+      type:
+      - object
+      - 'null'
+      properties:
+        version:
+          type: integer
+        verifyCode:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    AddParticipantRequest:
       type: object
       required:
-      - orderCode
+      - name
+      - email
       properties:
-        orderCode:
+        name:
           type: string
-          minLength: 24
-          maxLength: 64
-          description: The order's public code.
-        label:
+          maxLength: 200
+          description: The person's display name, as you'd write it on the file.
+        email:
           type: string
-          description: A display label for the document card.
+          format: email
+          maxLength: 320
+          description: Where you would reach them. Stored lowercased; per-room uniqueness is case-insensitive.
+        role:
+          type: string
+          maxLength: 40
+          default: client
+          description: Their part in the deal — client, signer, agent, lender, attorney, title_officer, observer, or anything else you use. Descriptive only; it grants no authorization.
     RoomView:
       type: object
       properties:
@@ -381,6 +400,129 @@ components:
         updatedAt:
           type: string
           format: date-time
+    RoomSummary:
+      type: object
+      properties:
+        roomCode:
+          type: string
+        name:
+          type: string
+        reference:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          example: open
+        orderCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AttachOrderRequest:
+      type: object
+      required:
+      - orderCode
+      properties:
+        orderCode:
+          type: string
+          minLength: 24
+          maxLength: 64
+          description: The order's public code.
+        label:
+          type: string
+          description: A display label for the document card.
+    Branding:
+      type:
+      - object
+      - 'null'
+      properties:
+        brandName:
+          type:
+          - string
+          - 'null'
+        accentColor:
+          type:
+          - string
+          - 'null'
+          description: Hex color like `#1a2b3c`.
+        logoUrl:
+          type:
+          - string
+          - 'null'
+          description: Public https URL of the partner's logo.
+    RoomParticipant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+          description: The real address. The PUBLIC room view masks this; only the owning partner reads it unmasked here.
+        role:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+    CallJoinResponse:
+      oneOf:
+      - type: object
+        title: Call is live
+        properties:
+          live:
+            type: boolean
+            enum:
+            - true
+          url:
+            type: string
+            description: LiveKit websocket URL.
+          token:
+            type: string
+            description: Short-lived LiveKit access token for this party.
+          room:
+            type: string
+            description: LiveKit room name, derived server-side from the closing.
+          displayName:
+            type: string
+            description: What the other participants see.
+          roomName:
+            type: string
+            description: The closing's name.
+          startedAt:
+            type: string
+            format: date-time
+      - type: object
+        title: Call has not started
+        properties:
+          live:
+            type: boolean
+            enum:
+            - false
+          roomName:
+            type: string
+          message:
+            type: string
+    CreateRoomRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Display name shown to every party (e.g. a property address).
+        reference:
+          type: string
+          maxLength: 200
+          description: Your internal file number.
     ActivityItem:
       type: object
       properties:
@@ -406,39 +548,11 @@ components:
         occurredAt:
           type: string
           format: date-time
-    CreateRoomResponse:
+    Error:
       type: object
       properties:
-        roomCode:
+        error:
           type: string
-          description: The room's bearer code — 40 lowercase hex characters.
-        roomUrl:
-          type: string
-          description: Root-relative path to the shareable page, `/rooms/{roomCode}`.
-        name:
-          type: string
-        reference:
-          type:
-          - string
-          - 'null'
-        status:
-          type: string
-          example: open
-        createdAt:
-          type: string
-          format: date-time
-    RoomPassportInfo:
-      type:
-      - object
-      - 'null'
-      properties:
-        version:
-          type: integer
-        verifyCode:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
     RoomOrderCard:
       type: object
       properties:
@@ -514,124 +628,15 @@ components:
         attachedAt:
           type: string
           format: date-time
-    AddParticipantRequest:
-      type: object
-      required:
-      - name
-      - email
-      properties:
-        name:
-          type: string
-          maxLength: 200
-          description: The person's display name, as you'd write it on the file.
-        email:
-          type: string
-          format: email
-          maxLength: 320
-          description: Where you would reach them. Stored lowercased; per-room uniqueness is case-insensitive.
-        role:
-          type: string
-          maxLength: 40
-          default: client
-          description: Their part in the deal — client, signer, agent, lender, attorney, title_officer, observer, or anything else you use. Descriptive only; it grants no authorization.
-    RoomParticipant:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        email:
-          type: string
-          format: email
-          description: The real address. The PUBLIC room view masks this; only the owning partner reads it unmasked here.
-        role:
-          type: string
-        addedAt:
-          type: string
-          format: date-time
-    CreateRoomRequest:
-      type: object
-      required:
-      - name
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Display name shown to every party (e.g. a property address).
-        reference:
-          type: string
-          maxLength: 200
-          description: Your internal file number.
-    Branding:
-      type:
-      - object
-      - 'null'
-      properties:
-        brandName:
-          type:
-          - string
-          - 'null'
-        accentColor:
-          type:
-          - string
-          - 'null'
-          description: Hex color like `#1a2b3c`.
-        logoUrl:
-          type:
-          - string
-          - 'null'
-          description: Public https URL of the partner's logo.
-    CallJoinResponse:
-      oneOf:
-      - type: object
-        title: Call is live
-        properties:
-          live:
-            type: boolean
-            enum:
-            - true
-          url:
-            type: string
-            description: LiveKit websocket URL.
-          token:
-            type: string
-            description: Short-lived LiveKit access token for this party.
-          room:
-            type: string
-            description: LiveKit room name, derived server-side from the closing.
-          displayName:
-            type: string
-            description: What the other participants see.
-          roomName:
-            type: string
-            description: The closing's name.
-          startedAt:
-            type: string
-            format: date-time
-      - type: object
-        title: Call has not started
-        properties:
-          live:
-            type: boolean
-            enum:
-            - false
-          roomName:
-            type: string
-          message:
-            type: string
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
-    RoomSummary:
+    CreateRoomResponse:
       type: object
       properties:
         roomCode:
           type: string
+          description: The room's bearer code — 40 lowercase hex characters.
+        roomUrl:
+          type: string
+          description: Root-relative path to the shareable page, `/rooms/{roomCode}`.
         name:
           type: string
         reference:
@@ -641,15 +646,22 @@ components:
         status:
           type: string
           example: open
-        orderCount:
-          type: integer
         createdAt:
           type: string
           format: date-time
-        updatedAt:
-          type: string
-          format: date-time
   responses:
+    NotFound:
+      description: Not found. Unknown codes read as a generic not-found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     Unauthorized:
       description: Missing, malformed, revoked, or unknown partner key.
       content:
@@ -658,18 +670,6 @@ components:
             $ref: '#/components/schemas/Error'
           example:
             error: A valid partner API key is required.
-    BadRequest:
-      description: Invalid request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-    NotFound:
-      description: Not found. Unknown codes read as a generic not-found.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
   parameters:
     RoomCode:
       name: roomCode
