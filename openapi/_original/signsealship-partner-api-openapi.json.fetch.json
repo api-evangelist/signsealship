@@ -1,0 +1,12 @@
+{
+ "url": "https://docs.signsealship.com/api-reference/openapi.json",
+ "requested_url": "https://docs.signsealship.com/api-reference/openapi.json",
+ "status": 200,
+ "content_type": "application/json",
+ "bytes": 108108,
+ "sha256": "3a2fa33c6c94e658fc778e0353c79e2288e67c7e2ea0caa3ba2224b34e7f8065",
+ "fetched_at": "2026-10-04",
+ "fetched_by": "APIEvangelist-Harvest/1.0 (+https://apievangelist.com)",
+ "match": "byte-identical",
+ "note": "Re-fetched from the provider by verify-openapi-sources.py; the archived file is byte-identical to what the provider serves."
+}
