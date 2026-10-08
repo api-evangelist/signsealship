@@ -391,6 +391,8 @@ maintainers:
   X-twitter: ''
   email: ''
 common:
+- type: RateLimits
+  url: rate-limits/signsealship-rate-limits.yml
 - type: CapabilityMap
   url: capabilities/signsealship-capability-edges.yml
   name: SignSealShip Partner API Business Capability Map
