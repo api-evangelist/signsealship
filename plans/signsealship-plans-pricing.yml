@@ -126,3 +126,35 @@ billing_integration:
 api_pricing_gate: >-
   The Order API and partner webhooks are gated at the $149/mo Pro Office tier. A trial key can
   exercise the sandbox order lifecycle but cannot create a live order.
+x-canonical:
+  generated: '2026-10-08'
+  vocabulary: all/0-working/economics/plans-canonical.yml
+  models:
+  - free
+  - subscription
+  units: []
+  plans:
+  - name: Trial key
+    access: other
+    model: free
+    model_how: derived
+    units: []
+    periods: []
+  - name: Partner Link
+    access: other
+    model: subscription
+    model_how: derived
+    units: []
+    periods: []
+  - name: Pro Office
+    access: other
+    model: subscription
+    model_how: derived
+    units: []
+    periods: []
+  - name: Closing Desk
+    access: other
+    model: subscription
+    model_how: derived
+    units: []
+    periods: []
