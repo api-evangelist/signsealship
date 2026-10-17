@@ -52,14 +52,12 @@ paths:
       operationId: postApiPartnerRequest
       x-operation-id-source: derived
 components:
-  responses:
-    BadRequest:
-      description: Invalid request.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
   schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
     PartnerRequestResponse:
       type: object
       required:
@@ -75,11 +73,6 @@ components:
         message:
           type: string
           description: A browser-safe confirmation message.
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
     PartnerRequest:
       type: object
       required:
@@ -115,6 +108,13 @@ components:
         recaptchaToken:
           type: string
           description: Optional bot-screening token; omit when calling the API directly.
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   securitySchemes:
     partnerKey:
       type: http

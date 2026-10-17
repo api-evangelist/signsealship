@@ -142,12 +142,6 @@ paths:
       operationId: postApiPartnerSandboxOrdersByCodeAdvance
       x-operation-id-source: derived
 components:
-  schemas:
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
   parameters:
     OrderCode:
       name: code
@@ -156,6 +150,12 @@ components:
       schema:
         type: string
       description: The order's public code from the create response.
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
   responses:
     Unauthorized:
       description: Missing, malformed, revoked, or unknown partner key.

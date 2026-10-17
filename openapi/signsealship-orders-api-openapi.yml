@@ -219,74 +219,18 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    OrderServices:
-      type: string
-      description: 'Which services the order includes, as a comma-separated flags string. Possible flags: `Sign`, `Notarize`, `Ship`, `Fax`. Parse by splitting on `", "` — this is NOT an object of booleans (corrected 2026-08-01; the schema previously mis-documented it as one).'
-      example: Sign, Notarize, Ship
-    OrderDetail:
+    OrderLine:
       type: object
       properties:
-        requestId:
+        type:
           type: string
-          description: This request's id — quote it in support tickets.
-        orderCode:
+          description: Machine-readable line type.
+        label:
           type: string
-        orderUrl:
-          type: string
-        status:
-          type: string
-        services:
-          $ref: '#/components/schemas/OrderServices'
-        envelopeStatus:
-          type:
-          - string
-          - 'null'
-          description: The e-sign envelope's status when the order includes signing, else `null`.
-        externalReference:
-          type:
-          - string
-          - 'null'
-        customerEmail:
-          type: string
-        subtotalCents:
+          description: Display label for the line.
+        amountCents:
           type: integer
-        discountCents:
-          type: integer
-        totalCents:
-          type: integer
-        lines:
-          type: array
-          items:
-            $ref: '#/components/schemas/OrderLine'
-        createdAt:
-          type: string
-          format: date-time
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
-    OrderSummary:
-      type: object
-      properties:
-        orderCode:
-          type: string
-        status:
-          type: string
-        services:
-          $ref: '#/components/schemas/OrderServices'
-        totalCents:
-          type: integer
-        externalReference:
-          type:
-          - string
-          - 'null'
-        customerEmail:
-          type: string
-          description: The signer / client email from the create call.
-        createdAt:
-          type: string
-          format: date-time
+          description: Line amount in USD cents.
     CreateOrderResponse:
       type: object
       properties:
@@ -328,18 +272,6 @@ components:
           - string
           - 'null'
           description: The Stripe hosted-checkout URL. `null` unless `create_checkout=true` was sent, payments are configured, and the order is payable — a ManualQuoteRequired order returns no checkout.
-    OrderLine:
-      type: object
-      properties:
-        type:
-          type: string
-          description: Machine-readable line type.
-        label:
-          type: string
-          description: Display label for the line.
-        amountCents:
-          type: integer
-          description: Line amount in USD cents.
     CreateOrderRequest:
       type: object
       required:
@@ -456,6 +388,74 @@ components:
           - 'true'
           - 'on'
           description: Also mint the Stripe hosted-checkout session in the same call and return it as `checkoutUrl`.
+    OrderSummary:
+      type: object
+      properties:
+        orderCode:
+          type: string
+        status:
+          type: string
+        services:
+          $ref: '#/components/schemas/OrderServices'
+        totalCents:
+          type: integer
+        externalReference:
+          type:
+          - string
+          - 'null'
+        customerEmail:
+          type: string
+          description: The signer / client email from the create call.
+        createdAt:
+          type: string
+          format: date-time
+    OrderServices:
+      type: string
+      description: 'Which services the order includes, as a comma-separated flags string. Possible flags: `Sign`, `Notarize`, `Ship`, `Fax`. Parse by splitting on `", "` — this is NOT an object of booleans (corrected 2026-08-01; the schema previously mis-documented it as one).'
+      example: Sign, Notarize, Ship
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    OrderDetail:
+      type: object
+      properties:
+        requestId:
+          type: string
+          description: This request's id — quote it in support tickets.
+        orderCode:
+          type: string
+        orderUrl:
+          type: string
+        status:
+          type: string
+        services:
+          $ref: '#/components/schemas/OrderServices'
+        envelopeStatus:
+          type:
+          - string
+          - 'null'
+          description: The e-sign envelope's status when the order includes signing, else `null`.
+        externalReference:
+          type:
+          - string
+          - 'null'
+        customerEmail:
+          type: string
+        subtotalCents:
+          type: integer
+        discountCents:
+          type: integer
+        totalCents:
+          type: integer
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+        createdAt:
+          type: string
+          format: date-time
   parameters:
     IdempotencyKey:
       name: Idempotency-Key

@@ -323,154 +323,6 @@ paths:
       x-operation-id-source: derived
 components:
   schemas:
-    RoomPassportInfo:
-      type:
-      - object
-      - 'null'
-      properties:
-        version:
-          type: integer
-        verifyCode:
-          type: string
-        createdAt:
-          type: string
-          format: date-time
-    AddParticipantRequest:
-      type: object
-      required:
-      - name
-      - email
-      properties:
-        name:
-          type: string
-          maxLength: 200
-          description: The person's display name, as you'd write it on the file.
-        email:
-          type: string
-          format: email
-          maxLength: 320
-          description: Where you would reach them. Stored lowercased; per-room uniqueness is case-insensitive.
-        role:
-          type: string
-          maxLength: 40
-          default: client
-          description: Their part in the deal — client, signer, agent, lender, attorney, title_officer, observer, or anything else you use. Descriptive only; it grants no authorization.
-    RoomView:
-      type: object
-      properties:
-        roomCode:
-          type: string
-        name:
-          type: string
-        reference:
-          type:
-          - string
-          - 'null'
-        status:
-          type: string
-          example: open
-        partnerName:
-          type: string
-        branding:
-          $ref: '#/components/schemas/Branding'
-        progress:
-          type: object
-          properties:
-            total:
-              type: integer
-            signed:
-              type: integer
-            sealed:
-              type: integer
-            delivered:
-              type: integer
-        orders:
-          type: array
-          items:
-            $ref: '#/components/schemas/RoomOrderCard'
-        activity:
-          type: array
-          items:
-            $ref: '#/components/schemas/ActivityItem'
-        passport:
-          $ref: '#/components/schemas/RoomPassportInfo'
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-    RoomSummary:
-      type: object
-      properties:
-        roomCode:
-          type: string
-        name:
-          type: string
-        reference:
-          type:
-          - string
-          - 'null'
-        status:
-          type: string
-          example: open
-        orderCount:
-          type: integer
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-    AttachOrderRequest:
-      type: object
-      required:
-      - orderCode
-      properties:
-        orderCode:
-          type: string
-          minLength: 24
-          maxLength: 64
-          description: The order's public code.
-        label:
-          type: string
-          description: A display label for the document card.
-    Branding:
-      type:
-      - object
-      - 'null'
-      properties:
-        brandName:
-          type:
-          - string
-          - 'null'
-        accentColor:
-          type:
-          - string
-          - 'null'
-          description: Hex color like `#1a2b3c`.
-        logoUrl:
-          type:
-          - string
-          - 'null'
-          description: Public https URL of the partner's logo.
-    RoomParticipant:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        email:
-          type: string
-          format: email
-          description: The real address. The PUBLIC room view masks this; only the owning partner reads it unmasked here.
-        role:
-          type: string
-        addedAt:
-          type: string
-          format: date-time
     CallJoinResponse:
       oneOf:
       - type: object
@@ -509,50 +361,6 @@ components:
             type: string
           message:
             type: string
-    CreateRoomRequest:
-      type: object
-      required:
-      - name
-      properties:
-        name:
-          type: string
-          minLength: 1
-          maxLength: 200
-          description: Display name shown to every party (e.g. a property address).
-        reference:
-          type: string
-          maxLength: 200
-          description: Your internal file number.
-    ActivityItem:
-      type: object
-      properties:
-        orderCode:
-          type: string
-        action:
-          type: string
-          enum:
-          - order.created
-          - order.transition
-          - order.claimed
-          - order.cancelled
-          - signing_link.issued
-          - room.order_attached
-        fromStatus:
-          type:
-          - string
-          - 'null'
-        toStatus:
-          type:
-          - string
-          - 'null'
-        occurredAt:
-          type: string
-          format: date-time
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
     RoomOrderCard:
       type: object
       properties:
@@ -649,15 +457,207 @@ components:
         createdAt:
           type: string
           format: date-time
+    RoomPassportInfo:
+      type:
+      - object
+      - 'null'
+      properties:
+        version:
+          type: integer
+        verifyCode:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    AddParticipantRequest:
+      type: object
+      required:
+      - name
+      - email
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          description: The person's display name, as you'd write it on the file.
+        email:
+          type: string
+          format: email
+          maxLength: 320
+          description: Where you would reach them. Stored lowercased; per-room uniqueness is case-insensitive.
+        role:
+          type: string
+          maxLength: 40
+          default: client
+          description: Their part in the deal — client, signer, agent, lender, attorney, title_officer, observer, or anything else you use. Descriptive only; it grants no authorization.
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    CreateRoomRequest:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Display name shown to every party (e.g. a property address).
+        reference:
+          type: string
+          maxLength: 200
+          description: Your internal file number.
+    AttachOrderRequest:
+      type: object
+      required:
+      - orderCode
+      properties:
+        orderCode:
+          type: string
+          minLength: 24
+          maxLength: 64
+          description: The order's public code.
+        label:
+          type: string
+          description: A display label for the document card.
+    RoomView:
+      type: object
+      properties:
+        roomCode:
+          type: string
+        name:
+          type: string
+        reference:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          example: open
+        partnerName:
+          type: string
+        branding:
+          $ref: '#/components/schemas/Branding'
+        progress:
+          type: object
+          properties:
+            total:
+              type: integer
+            signed:
+              type: integer
+            sealed:
+              type: integer
+            delivered:
+              type: integer
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoomOrderCard'
+        activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityItem'
+        passport:
+          $ref: '#/components/schemas/RoomPassportInfo'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    RoomSummary:
+      type: object
+      properties:
+        roomCode:
+          type: string
+        name:
+          type: string
+        reference:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          example: open
+        orderCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Branding:
+      type:
+      - object
+      - 'null'
+      properties:
+        brandName:
+          type:
+          - string
+          - 'null'
+        accentColor:
+          type:
+          - string
+          - 'null'
+          description: Hex color like `#1a2b3c`.
+        logoUrl:
+          type:
+          - string
+          - 'null'
+          description: Public https URL of the partner's logo.
+    RoomParticipant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+          description: The real address. The PUBLIC room view masks this; only the owning partner reads it unmasked here.
+        role:
+          type: string
+        addedAt:
+          type: string
+          format: date-time
+    ActivityItem:
+      type: object
+      properties:
+        orderCode:
+          type: string
+        action:
+          type: string
+          enum:
+          - order.created
+          - order.transition
+          - order.claimed
+          - order.cancelled
+          - signing_link.issued
+          - room.order_attached
+        fromStatus:
+          type:
+          - string
+          - 'null'
+        toStatus:
+          type:
+          - string
+          - 'null'
+        occurredAt:
+          type: string
+          format: date-time
   responses:
-    NotFound:
-      description: Not found. Unknown codes read as a generic not-found.
+    BadRequest:
+      description: Invalid request.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-    BadRequest:
-      description: Invalid request.
+    NotFound:
+      description: Not found. Unknown codes read as a generic not-found.
       content:
         application/json:
           schema:

@@ -185,11 +185,6 @@ components:
           example: proof_passport_api
         certificateAvailable:
           type: boolean
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
     ProofSealResponse:
       type: object
       properties:
@@ -243,6 +238,11 @@ components:
                 status:
                   type: string
                   example: pending
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
   responses:
     BadRequest:
       description: Invalid request.

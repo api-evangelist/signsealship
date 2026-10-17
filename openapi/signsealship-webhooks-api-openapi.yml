@@ -458,14 +458,14 @@ paths:
       x-operation-id-source: derived
 components:
   responses:
-    NotFound:
-      description: Not found. Unknown codes read as a generic not-found.
+    BadRequest:
+      description: Invalid request.
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-    BadRequest:
-      description: Invalid request.
+    NotFound:
+      description: Not found. Unknown codes read as a generic not-found.
       content:
         application/json:
           schema:
@@ -479,6 +479,40 @@ components:
           example:
             error: A valid partner API key is required.
   schemas:
+    RotateWebhookResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The rotated subscription id.
+        secret:
+          type: string
+          description: The new signing secret, prefixed `sss_whsec_`. Shown exactly once — only its hash is stored. Deliveries are signed with both the old and the new secret for 24 hours, then the old secret stops signing.
+        signatureHeader:
+          type: string
+          description: Header name carrying the HMAC signature on every delivery.
+        previousSecretExpiresAt:
+          type: string
+          format: date-time
+          description: Until this instant deliveries are signed with BOTH secrets — accept either during the overlap.
+    PassportWebhookResponse:
+      type: object
+      properties:
+        webhookId:
+          type: string
+          format: uuid
+        url:
+          type: string
+        signingSecret:
+          type: string
+          description: Shown exactly once — store it now. Only its hash is kept.
+        signatureHeader:
+          type: string
+          example: SignSealShip-Signature
+        verification:
+          type: string
+          description: How to verify the HMAC signature.
     CreateWebhookRequest:
       type: object
       required:
@@ -516,46 +550,6 @@ components:
             - recording.rejected
             - recording.receipt_sealed
           description: The order topics deliver only for orders created through the Order API.
-    RotateWebhookResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: The rotated subscription id.
-        secret:
-          type: string
-          description: The new signing secret, prefixed `sss_whsec_`. Shown exactly once — only its hash is stored. Deliveries are signed with both the old and the new secret for 24 hours, then the old secret stops signing.
-        signatureHeader:
-          type: string
-          description: Header name carrying the HMAC signature on every delivery.
-        previousSecretExpiresAt:
-          type: string
-          format: date-time
-          description: Until this instant deliveries are signed with BOTH secrets — accept either during the overlap.
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
-    CreateWebhookResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        secret:
-          type: string
-          description: Signing secret prefixed `sss_whsec_`. Shown exactly once.
-        url:
-          type: string
-        topics:
-          type: array
-          items:
-            type: string
-        signatureHeader:
-          type: string
-          example: SignSealShip-Signature
     WebhookSubscription:
       type: object
       properties:
@@ -594,23 +588,29 @@ components:
         createdAt:
           type: string
           format: date-time
-    PassportWebhookResponse:
+    Error:
       type: object
       properties:
-        webhookId:
+        error:
+          type: string
+    CreateWebhookResponse:
+      type: object
+      properties:
+        id:
           type: string
           format: uuid
+        secret:
+          type: string
+          description: Signing secret prefixed `sss_whsec_`. Shown exactly once.
         url:
           type: string
-        signingSecret:
-          type: string
-          description: Shown exactly once — store it now. Only its hash is kept.
+        topics:
+          type: array
+          items:
+            type: string
         signatureHeader:
           type: string
           example: SignSealShip-Signature
-        verification:
-          type: string
-          description: How to verify the HMAC signature.
   securitySchemes:
     partnerKey:
       type: http
