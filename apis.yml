@@ -28,7 +28,7 @@ specificationVersion: '0.15'
 tags:
 - Notarization
 - Remote Online Notarization
-- Electronic Signature
+- E-Signature
 - Document Verification
 - Legal Tech
 - Real Estate
@@ -47,6 +47,7 @@ tags_raw:
 - Real-Estate
 - A2A
 - Legal Technology
+- Electronic Signature
 apis:
 - aid: signsealship.com:ron-laws-dataset
   name: Remote online notarization requirements by U.S. jurisdiction
