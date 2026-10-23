@@ -622,3 +622,9 @@ components:
       in: cookie
       name: __Host-session
       description: SignSealShip dashboard login session cookie. Accepted by the `/api/partner/webhooks` management routes as an alternative to the partner key.
+x-provenance:
+  method: harvested
+  publisher: SignSealShip Partner API
+  source: https://docs.signsealship.com/api-reference/openapi.json
+  note: split by refine-openapis from the provider's own published document, verified by fetch (openapi/_original/*.fetch.json);
+    stamped by stamp-openapi-provenance.py (roadmap#793)
